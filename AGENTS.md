@@ -10,6 +10,7 @@ This repository **is a skill**, not a project that uses the skill.
 | Path | What it is |
 |---|---|
 | `SKILL.md` | The skill itself (English). `SKILL.zh.md` is the Chinese edition; clients load only `SKILL.md`. |
+| `README.md` / `README.zh-CN.md` | English and Chinese READMEs; keep both in sync when changing install steps. |
 | `references/` | Deep-dive documentation, loaded on demand. `*.md` are English; `*.zh.md` are the Chinese editions. |
 | `templates/` | Control-plane files with `{{placeholders}}` and `【待填】` (to-fill) markers; still Chinese. |
 | `scripts/` | `init-plan.sh`, `wt.sh`, `dispatch.sh`, `selftest.sh`. |

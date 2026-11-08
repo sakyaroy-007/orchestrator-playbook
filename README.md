@@ -2,6 +2,8 @@
 
 <img src="assets/icon.png" width="96" align="right" alt="Orchestrator Playbook icon">
 
+**English** | [简体中文](README.zh-CN.md)
+
 [![GitHub stars](https://img.shields.io/github/stars/sakyaroy-007/orchestrator-playbook?style=social)](https://github.com/sakyaroy-007/orchestrator-playbook/stargazers)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 

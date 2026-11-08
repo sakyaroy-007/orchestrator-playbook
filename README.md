@@ -58,6 +58,14 @@ flowchart LR
 
 The repository ships a `.codex-plugin/plugin.json` manifest. If your Codex build installs plugins from a git URL, point it at this repository. Otherwise use the symlink method below.
 
+### skills.sh / skills CLI
+
+```bash
+npx skills add sakyaroy-007/orchestrator-playbook
+```
+
+skills.sh lists a skill automatically once people install it through the CLI (anonymous install telemetry).
+
 ### Any other client
 
 Copy or symlink this directory into the agent's skills directory:

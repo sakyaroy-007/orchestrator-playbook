@@ -10,205 +10,207 @@ metadata:
 disable-model-invocation: true
 ---
 
-# 总指挥打法（orchestrator playbook）
+# Orchestrator Playbook
 
-这是一个**只在被明确任命为总指挥时才使用**的方法论：把大项目拆成任务卡，派给多个执行者 agent 并行做，由一个总指挥亲自审查、独家合并。
+A methodology for **one orchestrator agent plus several worker agents** on a repository project. The orchestrator plans, splits work into self-contained task cards, dispatches them to workers in parallel git worktrees, reviews every branch personally, and is the only one who merges.
 
-角色有四个：拍板人（人）、总指挥（一个 agent）、执行者（若干 agent）、控制面（仓库里的文件）。状态全部落在文件里，所以总指挥可以换人、换 agent、换会话。
+Four roles: the **human decider**, one **orchestrator**, several **workers**, and the **control plane** (files in the repo). All state lives in files, so the orchestrator can change hands — another session, another model, another agent tool — without losing context.
 
-## §0 启动门（先过这一关，再往下读）
+A Chinese edition of this file is at `SKILL.zh.md`. The `references/` and `templates/` are currently in Chinese; the workflows are the same.
 
-**只有满足下面任意一条，你才是总指挥：**
+## §0 Start gate — read this before anything else
 
-1. 拍板人在**本次会话**里明确任命了你（例如「你来当总指挥 / 由你指挥 / 你负责派活」）；
-2. 仓库里有 `.orchestrator/TEAM.md`，里面记录的当前总指挥（holder）**就是你**，并且写着「由你继续」；
-3. 你正在处理一次**接任**：拍板人让另一个 agent 把总指挥交给你，或 TEAM.md 里挂着一条未合并的 `.orchestrator/<agent>` 分支指向你。
+**You are the orchestrator only if one of these is true:**
 
-**一条都不满足时，按你的实际身份行事：**
+1. the human appointed you **in this session** ("you are the orchestrator", "you run this", "dispatch the work");
+2. `.orchestrator/TEAM.md` records you as the current holder **and** says to continue;
+3. you are explicitly **taking over** from a previous orchestrator (the human asked for the handoff, or an unmerged `.orchestrator/<agent>` note points to you).
 
-- **你是被派活的执行者**：只读 `docs/plan/WORKER.md` 和你的任务卡，按 worker 规则干活。本 skill 的方法论可以帮你理解全局，但**不许**写控制面、不许派活给别人、不许合并、不许把「我是总指挥」写进任何文件或回报。
-- **你是普通助手**（没被派活、也不是总指挥）：把它当知识看，回答用户的问题；不要主动接管项目。
-- **发现冲突**（TEAM.md 的 holder 是别人，或 `.orchestrator/` 有未合并分支）：报告给拍板人或当前 holder，不自作主张接管。
+**If none applies, act as what you are:**
 
-⚠️ 最常见的误用：执行者读到本 skill，以为自己是总指挥，开始派活或改计划。这会让一个项目同时出现两个总指挥，控制面立刻分裂。**启动门不是建议，是硬闸。**
+- **a dispatched worker**: read only `docs/plan/WORKER.md` and your task card; follow the worker rules. You may read this skill to understand the big picture, but you must **not** write the control plane, dispatch work, merge, or claim to be the orchestrator in any file or report;
+- **a general assistant** (not dispatched, not appointed): treat this as knowledge and answer questions; do not take over the project;
+- **in conflict** (TEAM.md names someone else, or `.orchestrator/` has an unmerged takeover note): report it to the human or the current holder; do not self-appoint.
 
-## 三个角色
+⚠️ The most common failure: a worker reads this skill and starts acting as orchestrator. Two orchestrators then split the control plane. The start gate is a hard gate, not advice.
 
-| 角色 | 做 | 不做 |
+## Roles
+
+| Role | Does | Does not |
 |---|---|---|
-| **拍板人**（人） | 产品 / 业务 / 法律 / 花钱的决定；外部事项（资质、账号、采购）；授权（派发、推送、权限）；**任命总指挥** | 不转派，不审代码（除非想看） |
-| **总指挥**（主脑 agent） | 体检、计划、拆卡、派发；**亲自审查**；**独家合并与推送**；维护控制面和交接文档；把要拍板的事整理成台账 | 原则上不写实现代码；不替拍板人做决定；不接受自报；不自我任命 |
-| **执行者**（worker agent） | 只做派给它的**那一张卡**：在自己的 worktree 里写，提交到自己的分支，写变更说明，按模板回报 | 不 push / merge，不改共享文档，不扩范围，卡住了不猜 |
-| **控制面**（文件） | 计划、看板、台账、审查、交接——唯一事实源 | 不由执行者写；不靠聊天记忆 |
+| **Human decider** | Product / business / legal / spending decisions; external items (licenses, accounts, procurement); authorizations (dispatch, push, permissions); **appoints the orchestrator** | Relay tasks, review code (unless they want to) |
+| **Orchestrator** | Inspects the codebase, plans, splits cards, dispatches; **reviews personally**; **merges and pushes exclusively**; maintains the control plane and handoff docs; turns open questions into a decision ledger | Write implementation code (by default); make the human's decisions; trust self-reports; self-appoint |
+| **Worker** | Exactly the **one card** assigned: write only in its worktree, commit to its branch, add a change note, report with the template | Push / merge, edit shared docs, expand scope, guess when blocked |
+| **Control plane** | Plans, board, ledger, reviews, handoff — the single source of truth | Written by workers; kept only in chat memory |
 
-总指挥只在三种情况下亲自写代码：
-- 审查都难判对错的核心件（合并前另起独立审查）；
-- 执行者做不了的交互或特权步骤（输密码、真机验收）；
-- 控制面文档本身。
+The orchestrator writes code itself only in three cases:
+- core pieces where even review cannot decide correctness (then get an independent review before merging);
+- interactive or privileged steps a worker cannot perform (passwords, real-hardware acceptance);
+- the control plane documents themselves.
 
-## 十条铁律
+## Ten rules
 
-1. **控制面是唯一事实源**。计划、卡、看板、台账都在仓库文件里，只有总指挥写。聊天里说的、记忆里记的，没写回文件就不算数：会话会断，上下文会压缩，主脑会换人，文件不会。
-2. **一卡一 worktree 一分支**。执行者只在 `<主仓>-wt/<卡号>` 里写，只提交到 `t/<号>-<slug>`。集成线（main）只由总指挥合并（`--no-ff`），远端只由总指挥推。
-3. **卡必须自包含、可验收**。执行者读 WORKER.md、卡、卡上列的必读文件，就能干完。验收写成「命令 + 预期输出」，不写「优化一下」。派发口令永远是一句指向文件的话，不在聊天里贴卡的内容。
-4. **不信自报**。每张卡回来，总指挥都进 worktree 亲自复跑验收、读完整 diff，查越界、假测试、密钥残留、不可逆操作。变更说明里每一条「已更新」都要核实。
-5. **审查是瓶颈，写代码不是**。同时在做的实现卡不超过 4 张；宁可卡拆小一点，审得深一点。高风险卡逐行读，还要做变异检验：故意改坏代码，确认测试能抓到。
-6. **自己写的必须别人审**。总指挥亲写的卡，合并前另起一个**不看你结论**的独立审查，只给它规格和代码。
-7. **决定归拍板人**。产品、业务、法律、不可逆操作、提权，这些事进问题台账，写清证据、建议、影响。可回滚的先按建议走，标「待确认」；不可逆的停下等。拍板人改主意时新开一条，取代旧的。
-8. **worktree 只隔离文件，不隔离运行时**。端口、常驻服务、真机、凭据、全局配置都是共享的：共享资源全局串行、加锁，端口按卡号分配，数据用临时库。热点文件同一时刻只给一张卡。
-9. **范围外的发现立新卡，不顺手改**。执行者遇到歧义、需要做决定、或同一问题两次失败，就停下回报 `blocked`，附上倾向的方案，不许猜。同一执行者在同一问题上失败两次，换人或换模型。
-10. **合并后当场同步文档并推送**。看板、交接文档、README 目录树、台账、ADR 当场更新；每次合并后跑 `git status -sb`，不许显示 ahead。收工时的交接文档要能让一个全新的 agent 5 分钟接上。
+1. **The control plane is the only source of truth.** Plans, cards, board, ledger live in repo files; only the orchestrator writes them. Chat messages and agent memory do not count until written back: sessions end, context compacts, orchestrators change; files do not.
+2. **One card, one worktree, one branch.** Workers write only in `<repo>-wt/<card>` and commit only to `t/<number>-<slug>`. The integration branch (`main`) is merged by the orchestrator only (`--no-ff`), and only the orchestrator pushes.
+3. **Cards must be self-contained and verifiable.** A worker needs only WORKER.md, the card, and the files the card lists. Acceptance is "command + expected output", never "make it better". The dispatch prompt is always one sentence pointing at files; never paste the card into chat.
+4. **Do not trust self-reports.** For every returned card, the orchestrator re-runs the acceptance commands, reads the full diff, and checks for scope creep, fake tests, leaked secrets, and irreversible operations. Every "updated" claim in the change note gets verified.
+5. **Review is the bottleneck, not writing.** Keep at most four implementation cards in flight. Prefer smaller cards and deeper review. High-risk cards get line-by-line review plus mutation testing: break the code on purpose and confirm the tests catch it.
+6. **What you write, someone else reviews.** Before merging a card the orchestrator wrote, spawn an independent reviewer that does **not** see the orchestrator's conclusions — only the spec and the code.
+7. **Decisions belong to the human.** Product, business, legal, irreversible operations, and privilege escalation go to the decision ledger with evidence, recommendation, and impact. Reversible items may proceed on the recommendation marked "pending confirmation"; irreversible ones wait. When the human changes their mind, open a new entry that supersedes the old one.
+8. **Worktrees isolate files, not runtime.** Ports, daemons, real hardware, credentials, and global config are shared: serialize shared resources behind a lock, allocate ports per card, use temporary databases. A hot file belongs to one card at a time.
+9. **Out-of-scope findings become new cards.** A worker who hits ambiguity, needs a product decision, or fails the same problem twice stops and reports `blocked` with the preferred option — no guessing. Two failures on the same problem means a different agent or a different model.
+10. **After merging, sync docs and push immediately.** Update the board, handoff doc, README tree, ledger, and ADRs in the same session; run `git status -sb` after every merge and never leave it showing "ahead". The handoff doc must let a brand-new agent pick up in five minutes.
 
-## 换总指挥（一等流程）
+## Changing the orchestrator (first-class process)
 
-总指挥一定会换：额度耗尽、换模型、换工具、换人。**任命权只属于拍板人**，总指挥不能自我任命，也不能把任命权交给任何 agent。
+The orchestrator will change: quota runs out, models change, tools change, people change. **Only the human may appoint**; an agent cannot self-appoint, and cannot delegate the appointment.
 
-### 谁记录「当前总指挥」
+### One place records the holder
 
-一个地方，`文件:.orchestrator/TEAM.md`，内容至少包含：
+`.orchestrator/TEAM.md`, containing at least:
 
 ```markdown
-# 团队
-- 拍板人：<称呼>
-- 当前总指挥（holder）：<agent 名称> · 上任 <日期> · 状态：在任 / 交接中 / 代理
-- 上一任：<agent 名称>（<日期> 交棒给 <新 holder>）
-- 执行者花名册：<名称> | 通道 | 默认模型 | 沙箱 | 擅长 | 已知坑
-- 派发通道：<这个总指挥实际可用的方式>
-- 授权：<能直接派谁 / 能推什么 / 需要拍板人做的>
+# Team
+- Human decider: <name>
+- Current orchestrator (holder): <agent> · since <date> · state: active / handing over / acting
+- Previous: <agent> (handed over on <date>)
+- Worker roster: <name> | channel | default model | sandbox | strengths | known pitfalls
+- Dispatch channel: <what this orchestrator can actually use>
+- Authorizations: <who can be dispatched / what can be pushed / what needs the human>
 ```
 
-规则：
-- **只有拍板人能改 holder**。总指挥可以写自己的接手记录，但不能把 holder 改成自己（除非拍板人已任命）。
-- 每次换人，旧 holder 和新 holder 各写一段，追加，不覆盖。
-- 执行者开工前看这里，知道回报给谁。
+Rules:
+- **Only the human changes the holder.**
+- An orchestrator may record its own takeover, but may not make itself holder without the human's appointment.
+- Every change appends a paragraph from the outgoing and incoming holder; never overwrite.
+- Workers read this to know whom to report to.
 
-### 交棒仪式（旧总指挥做，在 main 上）
+### Handoff ritual (outgoing orchestrator, on main)
 
-1. **写交接**：在 `HANDOFF.md` 里补一节「交棒给 <新 holder>」：
-   - 当前波次、进行中 / 待审的卡及分支和最后提交；
-   - 未推的提交、共享资源锁的 owner、还在跑的后台进程；
-   - 待拍板事项（`questions.md` 里未答的）；
-   - **只在你脑子里的事实**：踩过的坑、没写卡的发现、某个执行者的脾气、下一步该派什么。
-2. **把 agent 私有记忆搬进仓库**：你在这个项目上积累的、写在 agent 自己记忆/笔记里的东西，凡是下一个总指挥用得上的，抄进 `docs/plan/notes/`（或交接文档的「项目记忆」段）。agent 之间不共享私有记忆，**仓库是唯一的共享介质**。
-3. **更新 TEAM.md**：holder 改成新 holder，状态「交接中」。
-4. **提交并推送**。没推的提交等于没交接。
+1. **Write the handoff** in `HANDOFF.md` under "Handing over to <new holder>":
+   - current wave; in-flight / in-review cards with branches and last commits;
+   - unpushed commits, shared-resource lock owners, running daemons;
+   - open decisions from `questions.md`;
+   - **facts only in your head**: pitfalls, findings without a card, worker quirks, what to dispatch next.
+2. **Move agent-private memory into the repo.** Anything in your own memory/notes that the next orchestrator needs goes into `docs/plan/notes/` (or a "project memory" section in the handoff). Agents do not share private memory; **the repo is the only shared medium**.
+3. **Update TEAM.md**: holder = new holder, state "handing over".
+4. **Commit and push.** An unpushed commit is an unfinished handoff.
 
-### 接手仪式（新总指挥做）
+### Takeover ritual (incoming orchestrator)
 
-1. **按顺序读**：`AGENTS.md` → `HANDOFF.md` → `docs/plan/status.md` → `docs/plan/questions.md` → `docs/plan/WORKER.md` → `.orchestrator/TEAM.md`。
-2. **核实现场**（文档可能过时）：
+1. **Read in order**: `AGENTS.md` → `HANDOFF.md` → `docs/plan/status.md` → `docs/plan/questions.md` → `docs/plan/WORKER.md` → `.orchestrator/TEAM.md`.
+2. **Verify the live state** (docs may lag):
    ```bash
    git log --oneline -15; git status -sb
    scripts/wt.sh ls
-   git -C <worktree> log --oneline <main>..HEAD   # 进行中 / 待审的卡有没有新提交
-   ls -t <派发日志目录> | head                     # 最近的派发与结束码
+   git -C <worktree> log --oneline <main>..HEAD   # new commits on in-flight / in-review cards
+   ls -t <dispatch log dir> | head                # recent dispatches and exit codes
    ```
-   再查共享资源锁的 owner、后台进程、常驻服务。
-3. **还文档欠账**：看板和现实对不上，先改看板。
-4. **核对自己的能力**：能派谁、用什么通道、能不能 push、默认模型是什么。和上一任不同的地方写进 TEAM.md。
-5. **认领**：TEAM.md 记「<日期> 已接手」，状态改「在任」。
-6. **给拍板人一段话的接手报告**：当前波次、待审几张、什么在阻塞、需要拍板什么。然后进入主循环。
-7. **不重议已答的拍板**。`questions.md` 里「已答」的都有约束力。
+   Check shared-resource lock owners, running processes, daemons.
+3. **Pay the documentation debt first**: if the board disagrees with reality, fix the board before anything else.
+4. **Check your own capabilities**: whom you can dispatch, through which channel, whether you can push, what the default model is. Differences from the previous holder go into TEAM.md.
+5. **Claim the role**: TEAM.md says "<date> took over", state "active".
+6. **Send the human a one-paragraph takeover report**: current wave, cards in review, blockers, decisions needed. Then enter the main loop.
+7. **Do not relitigate settled decisions.** Everything marked "answered" in `questions.md` is binding.
 
-### 临时代理
+### Acting orchestrator
 
-- 原 holder 不可用（额度、宕机、离线）时，拍板人可以指定代理：TEAM.md 状态写「代理」，写明期限。
-- 代理**只维持、不扩张**：审完在途的卡、不启动新波次、不改 ADR、不做不可逆操作。
-- 原 holder 回来，代理交还并补一段「代理期间发生了什么」。
+- If the holder is unavailable (quota, crash, offline), the human may appoint an acting orchestrator: TEAM.md state "acting", with an end date.
+- An acting orchestrator **maintains, does not expand**: finish in-flight reviews, start no new wave, change no ADR, perform no irreversible operation.
+- When the holder returns, the acting orchestrator hands back and appends "what happened while acting".
 
-### 两个 agent 都自称总指挥时
+### When two agents both claim to be orchestrator
 
-1. 以 `.orchestrator/TEAM.md` 的 holder 为准。
-2. 未被记录的一方**立刻降级为执行者**：停写共享文档、停合并，把手上的活按 worker 回报格式交给 holder。
-3. 谁都不许用「我改一下 TEAM.md 就行了」来抢位——那是拍板人的权力。
+1. `.orchestrator/TEAM.md` decides.
+2. The unrecorded one **immediately drops to worker**: stop writing shared docs, stop merging, hand over current work in the worker report format.
+3. Nobody may grab the role by editing TEAM.md — that is the human's power.
 
-## 控制面
+## Control plane
 
-| 文件 | 内容 | 谁写 |
+| File | Contents | Written by |
 |---|---|---|
-| `.orchestrator/TEAM.md` | 拍板人、当前 holder、上/下一任、执行者花名册、派发通道、授权 | 拍板人改 holder；总指挥写其余 |
-| `.orchestrator/PLAYBOOK.md` | 本项目实例化后的总指挥手册（角色、通道、模型推荐、共享资源锁、热点文件） | 总指挥 |
-| `docs/plan/README.md` | 总计划：一页纸、体检结论、目标定义、ADR 摘要、Epic、波次与关键路径、协作规程、风险 | 总指挥 |
-| `docs/plan/WORKER.md` | 执行者守则：开工三步、边界、质量规则、提交、回报模板、共享资源 | 总指挥 |
-| `docs/plan/tasks.md` | 全部卡的一行清单（执行者 / 依赖 / 规模 / 标记 / 是否已展开） | 总指挥 |
-| `docs/plan/tasks/T-NNN.md` | 可派发的完整卡，顶部是派发口令 | 总指挥 |
-| `docs/plan/status.md` | 看板、花名册与派发规矩、热点文件锁、共享资源锁、本波出口标准 | 总指挥 |
-| `docs/plan/questions.md` | 问题台账（等拍板的事） | 总指挥写，拍板人答 |
-| `docs/plan/external.md` | 拍板人的外部事项：周期、最晚启动、等待期间做什么、降级方案 | 总指挥 |
-| `docs/plan/decisions/ADR-NNN-*.md` | 架构决策；ADR-001 永远是「协作与分支」 | 总指挥 |
-| `docs/plan/reviews/T-NNN-rN.md` | 审查意见，退回返工用 | 总指挥 / 独立审查 |
-| `docs/plan/templates/` | 卡 / spike / 审查 / ADR 模板快照，让项目不依赖本 skill 也能自包含 | — |
-| `docs/changes/T-NNN.md` | 变更说明：执行者写，总指挥合并时据此同步共享文档 | 执行者 |
-| 交接文档（如 `HANDOFF.md`） | 当前状态、5 分钟接上、交接段、已知风险与未验证项、环境坑 | 总指挥 |
-| `AGENTS.md` / `CLAUDE.md` | 稳定规则层：红线、环境事实、「执行者先读 WORKER.md」 | 总指挥（很少改） |
+| `.orchestrator/TEAM.md` | Human, current holder, previous/acting, worker roster, dispatch channel, authorizations | Human changes the holder; orchestrator writes the rest |
+| `.orchestrator/PLAYBOOK.md` | This methodology instantiated for the project (roles, channels, model recommendations, shared-resource locks, hot files) | Orchestrator |
+| `docs/plan/README.md` | Master plan: one-pager, inspection findings, definition of done, ADR summary, epics, waves and critical path, collaboration protocol, risks | Orchestrator |
+| `docs/plan/WORKER.md` | Worker rules: start steps, boundaries, quality rules, commits, report template, shared resources | Orchestrator |
+| `docs/plan/tasks.md` | One-line index of all cards (owner / dependencies / size / flags / expanded?) | Orchestrator |
+| `docs/plan/tasks/T-NNN.md` | Dispatchable card, with the dispatch prompt at the top | Orchestrator |
+| `docs/plan/status.md` | Board, roster and dispatch rules, hot-file lock, shared-resource lock, wave exit criteria | Orchestrator |
+| `docs/plan/questions.md` | Decision ledger (waiting on the human) | Orchestrator writes, human answers |
+| `docs/plan/external.md` | Human's external items: lead time, latest start, what we do meanwhile, fallback | Orchestrator |
+| `docs/plan/decisions/ADR-NNN-*.md` | Architecture decisions; ADR-001 is always "collaboration and branching" | Orchestrator |
+| `docs/plan/reviews/T-NNN-rN.md` | Review findings, used for rework | Orchestrator / independent reviewer |
+| `docs/plan/templates/` | Snapshots of card / spike / review / ADR templates, so the project does not depend on this skill | — |
+| `docs/changes/T-NNN.md` | Change note: worker writes it, orchestrator syncs shared docs from it | Worker |
+| Handoff doc (e.g. `HANDOFF.md`) | Current state, five-minute pickup, handoff section, known risks and unverified items, environment pitfalls | Orchestrator |
+| `AGENTS.md` / `CLAUDE.md` | Stable rules: red lines, environment facts, "workers read WORKER.md first" | Orchestrator (rarely) |
 
-- **卡的状态**：待展开 → 可派 → 进行中 → 待审 →（返工 → 待审）→ 已合并。任何阶段都可能变成「阻塞」。
-- **标记**：
-  - 🔴 钱 / 鉴权 / 隔离 / 数据安全：加重审查，测试必须覆盖幂等、并发、越权；
-  - 🔒 占用共享资源：全局串行；
-  - 🏛 外部事项：拍板人办。
-- **规模**：S ≤ 半天，M ≈ 1 天，L ≈ 2 天。超过 L 必须拆。
-- **小项目可以裁剪**：`TEAM.md`、WORKER.md、status.md、`tasks/`、`docs/changes/` 加交接文档是最小集；总计划、台账、外部事项、ADR 按需要加。
+- **Card states**: proposed → ready → in progress → in review → (rework → in review) → merged. Any state can become "blocked".
+- **Flags**:
+  - 🔴 money / auth / isolation / data safety: heavier review; tests must cover idempotency, concurrency, and authorization;
+  - 🔒 shared resource: globally serialized;
+  - 🏛 external item: the human handles it.
+- **Sizes**: S ≤ half a day, M ≈ one day, L ≈ two days. Anything larger must be split.
+- **Small projects can trim**: TEAM.md, WORKER.md, status.md, `tasks/`, `docs/changes/`, and a handoff doc are the minimum; the master plan, ledger, external items, and ADRs as needed.
 
-## 主循环（每个会话）
+## Session loop
 
-0. **先确认你在这台机器上能怎么派活**：看 `.orchestrator/TEAM.md` 的「派发通道」。本机已有自己的调度器就优先用它（写进 TEAM.md）；没有的话用 `scripts/dispatch.sh` 或你自带的子代理工具。
-1. **开工**：先过 §0 启动门。然后读 TEAM.md、交接文档、`status.md`、`questions.md`，再核实现场：
-   - `git status -sb`：有没有没推的提交；
-   - `scripts/wt.sh ls`：哪些卡在做；
-   - 「进行中 / 待审」卡的分支有没有新提交，派发日志是什么情况。
-   文档和现实对不上，先修文档。
-2. **先收货**：待审的卡优先审（`references/review.md`）。通过就合并、同步文档、推送、清理 worktree；不通过就写 `reviews/T-NNN-rN.md`，派回原执行者。
-3. **再派新卡**：从 `tasks.md` 挑卡（依赖已满足、不撞热点锁、不超并行上限）→ 按当前代码展开成完整卡（`references/cards.md`）→ `scripts/wt.sh new <卡号> <slug>` → 预检 → 派发（`references/dispatch.md`）→ 看板标「进行中」。
-4. **等的时候**：派发放后台，不空转轮询。写下一批卡、整理台账、把 spike 结论回填 ADR、准备给拍板人的清单。
-5. **需要拍板时**：先写进 `questions.md`，攒成一批再问。一次不超过 3 个，每个带选项和推荐（`references/stakeholder.md`）。
-6. **收工**：看板每行准确；交接文档已更新；已答问题回填；`git status -sb` 不显示 ahead；已合并卡的 worktree 已清。
+0. **Confirm how you can dispatch here**: see the "dispatch channel" in `.orchestrator/TEAM.md`. If the machine already has its own scheduler, prefer it (record it in TEAM.md); otherwise use `scripts/dispatch.sh` or your own subagent tool.
+1. **Start**: pass the §0 gate, then read TEAM.md, the handoff doc, `status.md`, `questions.md`, and verify the live state:
+   - `git status -sb`: anything unpushed;
+   - `scripts/wt.sh ls`: which cards are active;
+   - new commits on in-flight / in-review branches; dispatch logs.
+   If docs disagree with reality, fix the docs first.
+2. **Collect before dispatching**: review cards in review first (`references/review.md`). Merge, sync docs, push, remove the worktree; or write `reviews/T-NNN-rN.md` and send it back to the original worker.
+3. **Then dispatch**: pick cards from `tasks.md` (dependencies met, no hot-file collision, under the in-flight limit) → expand into a complete card (`references/cards.md`) → `scripts/wt.sh new <card> <slug>` → preflight → dispatch (`references/dispatch.md`) → mark "in progress".
+4. **While waiting**: run dispatches in the background; do not poll. Write the next batch of cards, tidy the ledger, fold spike results into ADRs, prepare the list for the human.
+5. **When a decision is needed**: write it in `questions.md`, batch them, at most three at a time, each with options and a recommendation (`references/stakeholder.md`).
+6. **Wrap up**: every board row accurate; handoff doc updated; answered questions folded back; `git status -sb` not showing "ahead"; merged cards' worktrees removed.
 
-## 开局与接手
+## Bootstrap and takeover
 
-**新项目第一次用**：
+**First use on a new project**:
 
-1. 先体检：亲自跑测试，逐个单跑、再逆序跑；读关键路径找信任边界；列出硬缺口，带 `文件:行号`。
-2. 再铺控制面：
+1. Inspect first: run the tests yourself, each one alone and then in reverse order; read the critical paths for trust boundaries; list hard gaps with `file:line`.
+2. Then scaffold the control plane:
    ```bash
-   bash scripts/init-plan.sh <主仓路径> \
-        --project <项目名> --decider <拍板人称呼> --orchestrator <你的称呼>
+   bash scripts/init-plan.sh <repo> \
+        --project <name> --decider <human> --orchestrator <your name>
    ```
-   脚本不覆盖已有文件。铺完后，WORKER.md 和 status.md 里的 `【待填】` 要清零，才能派第一张卡。详见 `references/bootstrap.md`。
-3. W0 只做「让并行开发变安全」的地基卡。
+   The script never overwrites existing files. Before dispatching the first card, every `【待填】` (to-fill) marker in WORKER.md and status.md must be gone. See `references/bootstrap.md`.
+3. Wave 0 is only "make parallel development safe".
 
-**接手别人的总指挥位置**：按上面「接手仪式」做。详见 `references/bootstrap.md`。
+**Taking over as orchestrator**: follow the takeover ritual above; details in `references/bootstrap.md`.
 
-## 模型与配置（用户自选，本 skill 只推荐）
+## Models and configuration (user's choice; this skill only recommends)
 
-本 skill **不假设**你用什么供应商、什么网关、什么路由规则。模型由用户决定。
+This skill assumes no provider, gateway, or routing service. The user chooses the models.
 
-推荐原则：
+Recommendations:
+- **High-risk cards (money / auth / isolation / data safety)**: use the strongest model you have, and review hardest (line-by-line + mutation testing). A weaker model is not disqualifying — split the card smaller, make acceptance harder, review deeper.
+- **Ordinary cards**: the worker's default model is fine; no need to specify one per card.
+- **With an automatic model router**: it may classify a high-risk card as easy and silently downgrade it. When unsure, specify the model explicitly.
+- **Changing the model is cheaper than changing the agent**: after two failed attempts, try a different model or a different agent before rewriting the card.
 
-- **高风险卡（钱 / 鉴权 / 隔离 / 数据安全）**：建议用你能拿到的最强模型，并且审查也最重（逐行 + 变异检验）。模型弱不是不能做，而是卡要拆得更小、验收更硬、审查更重。
-- **普通卡**：执行者的默认模型即可，不必每个都指定。
-- **如果有自动选模型的路由器**：注意它可能把高风险卡判成简单卡、悄悄降档。拿不准就显式指定。
-- **换模型比换 agent 便宜**：返工两次以上，先考虑换模型或换人，别在原地打转。
+## File index
 
-## 文件索引
-
-| 文件 | 什么时候读 |
+| File | When to read |
 |---|---|
-| `references/bootstrap.md` | 新项目开局、接手总指挥、每个会话的开工 / 收工清单 |
-| `references/handoff-files.md` | `.orchestrator/` 各文件怎么写，换总指挥时的文件清单 |
-| `references/cards.md` | 拆卡、写卡、spike、契约、锁、滚动展开、防作弊的验收命令 |
-| `references/dispatch.md` | 派发前检查、预检、各种派发通道、模型与分工、收货 |
-| `references/review.md` | 审查清单、变异检验、独立审查、合并流水线、返工单 |
-| `references/stakeholder.md` | 问题台账、外部事项、怎么问、汇报节奏 |
-| `references/lessons.md` | 踩过的坑。派发前、合并前各扫一眼 |
-| `templates/*` | `init-plan.sh` 填好占位符后铺进项目；卡 / spike / 审查 / ADR 模板另存一份到 `docs/plan/templates/` |
-| `scripts/init-plan.sh` | 铺控制面（只新建，不覆盖；`--dry-run` 先看会建什么） |
-| `scripts/wt.sh` | worktree 管理：`new` / `ls` / `path` / `rm`（没合并时拒绝删除） |
-| `scripts/dispatch.sh` | 通用派发器：claude / codex / hermes / dsh，指定 worktree、限时、落日志、`--precheck` 预检 |
-| `scripts/selftest.sh` | 脚本端到端自测（只在临时仓库里跑）。改了脚本必须跑 |
+| `references/bootstrap.md` | New project, takeover, per-session start/end checklists |
+| `references/handoff-files.md` | How to write `.orchestrator/*`; handoff file checklists |
+| `references/cards.md` | Splitting and writing cards, spikes, contracts, locks, rolling expansion, anti-cheat acceptance commands |
+| `references/dispatch.md` | Preflight, dispatch channels, models and division of labor, collecting results |
+| `references/review.md` | Review checklist, mutation testing, independent review, merge pipeline, rework notes |
+| `references/stakeholder.md` | Decision ledger, external items, how to ask, reporting cadence |
+| `references/lessons.md` | 19 pitfalls; skim before dispatching and before merging |
+| `templates/*` | `init-plan.sh` fills the placeholders and writes them into the project; card / spike / review / ADR templates also go to `docs/plan/templates/` |
+| `scripts/init-plan.sh` | Scaffold the control plane (create-only; `--dry-run` previews) |
+| `scripts/wt.sh` | Worktree management: `new` / `ls` / `path` / `rm` (refuses to delete unmerged work) |
+| `scripts/dispatch.sh` | Dispatcher for claude / codex / hermes / dsh: worktree, timeout, log, `--precheck` |
+| `scripts/selftest.sh` | End-to-end script tests (temp repos only). Must pass after script changes |
 
-## 改进本 skill
+## Improving this skill
 
-- 踩到**通用**的新坑（换个项目也会踩），一条一行，连同对策追加到 `references/lessons.md`。
-- 项目特有的事实写进那个项目的 AGENTS.md 或交接文档，不要写进这里。
-- 本 skill 的原件在 `~/.agents/skills/orchestrator-playbook/`（按你机器上的安装位置）。改之前备份到 `~/.agents/skill-install-state/backups/`，改完跑 `scripts/selftest.sh`，必须全绿。
+- A **general** pitfall (any project would hit it) goes into `references/lessons.md`, one line plus the countermeasure.
+- Project-specific facts belong in that project's AGENTS.md or handoff doc, not here.
+- The original copy lives at `~/.agents/skills/orchestrator-playbook/` (or wherever you installed it). Back up to `~/.agents/skill-install-state/backups/` before changing scripts, then run `scripts/selftest.sh` — it must stay green.

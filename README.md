@@ -1,5 +1,7 @@
 # Orchestrator Playbook
 
+<img src="assets/icon.png" width="96" align="right" alt="Orchestrator Playbook icon">
+
 [![GitHub stars](https://img.shields.io/github/stars/sakyaroy-007/orchestrator-playbook?style=social)](https://github.com/sakyaroy-007/orchestrator-playbook/stargazers)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
@@ -110,7 +112,10 @@ This skill does not depend on any model provider, gateway, or routing service. T
 
 | Path | Purpose |
 |---|---|
-| `SKILL.md` | Roles, the 10 rules, the session loop, the handoff process (Chinese) |
+| `SKILL.md` | The skill itself (English) |
+| `SKILL.zh.md` | Chinese edition of the skill |
+| `AGENTS.md` | Rules for agents editing **this repository** (not its users) |
+| `CHANGELOG.md` | Release history |
 | `references/bootstrap.md` | Start a project, take over as orchestrator, per-session checklists |
 | `references/handoff-files.md` | `.orchestrator/TEAM.md` / `PLAYBOOK.md`: how to hand off cleanly |
 | `references/cards.md` | How to split and write task cards, spikes, anti-cheat acceptance commands |
@@ -124,7 +129,7 @@ This skill does not depend on any model provider, gateway, or routing service. T
 | `scripts/dispatch.sh` | Dispatcher for Claude / Codex / Hermes / DeepSeek Harness |
 | `scripts/selftest.sh` | 73-check end-to-end test of the scripts (temp repos only) |
 
-`SKILL.md`, `references/` and `templates/` are in Chinese; the skill works the same regardless. Translations are welcome.
+`references/` and `templates/` are currently in Chinese; the workflows are the same. Translations are welcome.
 
 ## Requirements
 

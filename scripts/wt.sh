@@ -29,8 +29,10 @@ resolve_root() {
     (cd "$WT_ROOT" && pwd -P) || die "WT_ROOT 不存在：$WT_ROOT"
     return 0
   fi
-  main_checkout_of "$(dirname "$0")" && return 0
+  # 先看当前目录：从项目里调用时，永远以项目为准，
+  # 避免 skill 自身恰好装在一个 git 仓库里时被误认成主仓。
   main_checkout_of "$(pwd)" && return 0
+  main_checkout_of "$(dirname "$0")" && return 0
   die "找不到主仓：cd 到项目里再跑，或设 WT_ROOT=<主仓路径>"
 }
 

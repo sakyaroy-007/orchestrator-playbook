@@ -29,7 +29,7 @@ A Chinese edition of this file is at `SKILL.zh.md`. The `references/` and `templ
 **If none applies, act as what you are:**
 
 - **a dispatched worker**: read only `docs/plan/WORKER.md` and your task card; follow the worker rules. You may read this skill to understand the big picture, but you must **not** write the control plane, dispatch work, merge, or claim to be the orchestrator in any file or report;
-- **a general assistant** (not dispatched, not appointed): treat this as knowledge and answer questions; do not take over the project;
+- **a general assistant**: treat this as knowledge; do not take over the project;
 - **in conflict** (TEAM.md names someone else, or `.orchestrator/` has an unmerged takeover note): report it to the human or the current holder; do not self-appoint.
 
 ⚠️ The most common failure: a worker reads this skill and starts acting as orchestrator. Two orchestrators then split the control plane. The start gate is a hard gate, not advice.
@@ -130,20 +130,20 @@ Rules:
 | File | Contents | Written by |
 |---|---|---|
 | `.orchestrator/TEAM.md` | Human, current holder, previous/acting, worker roster, dispatch channel, authorizations | Human changes the holder; orchestrator writes the rest |
-| `.orchestrator/PLAYBOOK.md` | This methodology instantiated for the project (roles, channels, model recommendations, shared-resource locks, hot files) | Orchestrator |
-| `docs/plan/README.md` | Master plan: one-pager, inspection findings, definition of done, ADR summary, epics, waves and critical path, collaboration protocol, risks | Orchestrator |
+| `.orchestrator/PLAYBOOK.md` | This methodology instantiated for the project | Orchestrator |
+| `docs/plan/README.md` | Master plan: one-pager, findings, definition of done, ADRs, epics, waves, risks | Orchestrator |
 | `docs/plan/WORKER.md` | Worker rules: start steps, boundaries, quality rules, commits, report template, shared resources | Orchestrator |
 | `docs/plan/tasks.md` | One-line index of all cards (owner / dependencies / size / flags / expanded?) | Orchestrator |
 | `docs/plan/tasks/T-NNN.md` | Dispatchable card, with the dispatch prompt at the top | Orchestrator |
-| `docs/plan/status.md` | Board, roster and dispatch rules, hot-file lock, shared-resource lock, wave exit criteria | Orchestrator |
+| `docs/plan/status.md` | Board, roster, dispatch rules, hot-file and shared-resource locks | Orchestrator |
 | `docs/plan/questions.md` | Decision ledger (waiting on the human) | Orchestrator writes, human answers |
-| `docs/plan/external.md` | Human's external items: lead time, latest start, what we do meanwhile, fallback | Orchestrator |
+| `docs/plan/external.md` | Human's external items: lead time, deadline, fallback | Orchestrator |
 | `docs/plan/decisions/ADR-NNN-*.md` | Architecture decisions; ADR-001 is always "collaboration and branching" | Orchestrator |
 | `docs/plan/reviews/T-NNN-rN.md` | Review findings, used for rework | Orchestrator / independent reviewer |
 | `docs/plan/templates/` | Snapshots of card / spike / review / ADR templates, so the project does not depend on this skill | — |
 | `docs/changes/T-NNN.md` | Change note: worker writes it, orchestrator syncs shared docs from it | Worker |
-| Handoff doc (e.g. `HANDOFF.md`) | Current state, five-minute pickup, handoff section, known risks and unverified items, environment pitfalls | Orchestrator |
-| `AGENTS.md` / `CLAUDE.md` | Stable rules: red lines, environment facts, "workers read WORKER.md first" | Orchestrator (rarely) |
+| Handoff doc (e.g. `HANDOFF.md`) | Current state, five-minute pickup, risks, environment pitfalls | Orchestrator |
+| `AGENTS.md` / `CLAUDE.md` | Stable rules: red lines, environment facts, worker entry point | Orchestrator (rarely) |
 
 - **Card states**: proposed → ready → in progress → in review → (rework → in review) → merged. Any state can become "blocked".
 - **Flags**:
@@ -151,7 +151,6 @@ Rules:
   - 🔒 shared resource: globally serialized;
   - 🏛 external item: the human handles it.
 - **Sizes**: S ≤ half a day, M ≈ one day, L ≈ two days. Anything larger must be split.
-- **Small projects can trim**: TEAM.md, WORKER.md, status.md, `tasks/`, `docs/changes/`, and a handoff doc are the minimum; the master plan, ledger, external items, and ADRs as needed.
 
 ## Session loop
 
@@ -187,10 +186,10 @@ Rules:
 This skill assumes no provider, gateway, or routing service. The user chooses the models.
 
 Recommendations:
-- **High-risk cards (money / auth / isolation / data safety)**: use the strongest model you have, and review hardest (line-by-line + mutation testing). A weaker model is not disqualifying — split the card smaller, make acceptance harder, review deeper.
-- **Ordinary cards**: the worker's default model is fine; no need to specify one per card.
-- **With an automatic model router**: it may classify a high-risk card as easy and silently downgrade it. When unsure, specify the model explicitly.
-- **Changing the model is cheaper than changing the agent**: after two failed attempts, try a different model or a different agent before rewriting the card.
+- **High-risk cards (money / auth / isolation / data safety)**: use the strongest model available and review hardest (line-by-line + mutation testing). A weaker model is not disqualifying — split smaller, make acceptance harder, review deeper.
+- **Ordinary cards**: the worker's default model is fine.
+- **With an automatic router**: it may classify a high-risk card as easy and downgrade it silently; when unsure, specify the model explicitly.
+- **Changing the model is cheaper than changing the agent**: after two failures, switch model or agent before rewriting the card.
 
 ## File index
 
@@ -203,14 +202,14 @@ Recommendations:
 | `references/review.md` | Review checklist, mutation testing, independent review, merge pipeline, rework notes |
 | `references/stakeholder.md` | Decision ledger, external items, how to ask, reporting cadence |
 | `references/lessons.md` | 19 pitfalls; skim before dispatching and before merging |
-| `templates/*` | `init-plan.sh` fills the placeholders and writes them into the project; card / spike / review / ADR templates also go to `docs/plan/templates/` |
+| `templates/*` | Placeholder files that `init-plan.sh` writes into the project |
 | `scripts/init-plan.sh` | Scaffold the control plane (create-only; `--dry-run` previews) |
 | `scripts/wt.sh` | Worktree management: `new` / `ls` / `path` / `rm` (refuses to delete unmerged work) |
 | `scripts/dispatch.sh` | Dispatcher for claude / codex / hermes / dsh: worktree, timeout, log, `--precheck` |
-| `scripts/selftest.sh` | End-to-end script tests (temp repos only). Must pass after script changes |
+| `scripts/selftest.sh` | End-to-end script tests (temp repos only) |
 
 ## Improving this skill
 
 - A **general** pitfall (any project would hit it) goes into `references/lessons.md`, one line plus the countermeasure.
 - Project-specific facts belong in that project's AGENTS.md or handoff doc, not here.
-- The original copy lives at `~/.agents/skills/orchestrator-playbook/` (or wherever you installed it). Back up to `~/.agents/skill-install-state/backups/` before changing scripts, then run `scripts/selftest.sh` — it must stay green.
+- Back up before changing scripts, then run `scripts/selftest.sh`; it must stay green.

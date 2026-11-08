@@ -1,0 +1,24 @@
+{
+  "name": "orchestrator-playbook",
+  "version": "2.0.0",
+  "description": "Multi-agent orchestration: one orchestrator plans, splits task cards, dispatches workers in parallel git worktrees, reviews every branch and is the only one who merges.",
+  "author": { "name": "Sakyaroy", "url": "https://github.com/sakyaroy-007" },
+  "homepage": "https://github.com/sakyaroy-007/orchestrator-playbook",
+  "repository": "https://github.com/sakyaroy-007/orchestrator-playbook",
+  "license": "MIT",
+  "keywords": ["skills", "multi-agent", "orchestration", "workflow", "code-review", "worktree"],
+  "skills": "./",
+  "interface": {
+    "displayName": "Orchestrator Playbook",
+    "shortDescription": "Plan, dispatch, review and merge across multiple coding agents",
+    "longDescription": "Use when you are appointed orchestrator: split work into self-contained task cards, dispatch them to worker agents in parallel git worktrees, review every branch yourself, and merge as the only integrator.",
+    "developerName": "Sakyaroy",
+    "category": "Developer Tools",
+    "capabilities": ["Read", "Write", "Interactive"],
+    "defaultPrompt": [
+      "Act as the orchestrator for this repo: read the control plane and tell me what is next.",
+      "Split this milestone into task cards and dispatch the first wave."
+    ],
+    "websiteURL": "https://github.com/sakyaroy-007/orchestrator-playbook"
+  }
+}

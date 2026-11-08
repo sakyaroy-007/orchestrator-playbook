@@ -1,6 +1,12 @@
 ---
 name: orchestrator-playbook
 description: Only when a human appoints you orchestrator, or .orchestrator/TEAM.md names you as holder, or you take over from a previous orchestrator. Multi-agent orchestration — one orchestrator plans, splits cards, dispatches, reviews every branch and is the only one who merges; workers run in parallel git worktrees. A dispatched worker must not act on it. 多 agent 总指挥打法：主脑计划 / 拆卡 / 派发 / 亲审 / 独家合并。
+license: MIT
+compatibility: Requires git, bash 3.2+, and perl (or timeout); scripts make no network calls and need no elevated privileges.
+metadata:
+  version: "2.0.0"
+  repository: "https://github.com/sakyaroy-007/orchestrator-playbook"
+  author: "Sakyaroy"
 disable-model-invocation: true
 ---
 

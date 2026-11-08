@@ -1,0 +1,10 @@
+{
+  "name": "orchestrator-playbook",
+  "description": "Multi-agent orchestration: one orchestrator plans, splits task cards, dispatches workers in parallel git worktrees, reviews every branch and is the only one who merges.",
+  "version": "2.0.0",
+  "author": { "name": "Sakyaroy" },
+  "homepage": "https://github.com/sakyaroy-007/orchestrator-playbook",
+  "repository": "https://github.com/sakyaroy-007/orchestrator-playbook",
+  "license": "MIT",
+  "keywords": ["skills", "multi-agent", "orchestration", "workflow", "code-review", "worktree"]
+}

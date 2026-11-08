@@ -1,23 +1,23 @@
-# 踩坑实录（来自真实项目，已通用化）
+# Lessons from real runs
 
-每条的格式是「坑 → 对策」。派发前、合并前各扫一眼。新坑追加到末尾。
+Format: pitfall → countermeasure. Skim before dispatching and before merging. Append new ones at the end.
 
-1. **以为派的是强模型，实际跑的是默认的便宜模型。** → 派发后去日志里确认实际模型。高风险卡不要赌「按难度自动选模型」的分类器。
-2. **单发模式的执行者碰到交互（sudo 密码、授权弹窗），直接退出。** → 卡里写明「只做到离线可验证」，交互和特权步骤留给总指挥或拍板人。派发前就想好那一步由谁来跑。
-3. **合并后忘了推送，一攒就是 12 个提交。** → 每次合并后跑 `git status -sb`，不许显示 ahead。
-4. **变更说明写了「已更新」，实际没改。** → 审查时逐条核对；虚报本身就算必须修。
-5. **分支以另一个未合并的分支为起点，上游后来又返工了。** → 在看板备注里写明起点；合并前更新到上游的最终版本，再复跑验收。
-6. **App 的分支选择器在主仓里 checkout，或者自己另建 worktree。** → 只用显式指定工作目录的派发方式；每次派发前先预检 pwd 和分支。
-7. **测试有顺序依赖，单独跑就红**（52 个里有 19 个）。→ 体检时逐个单跑、再逆序跑；开始并行开发前先修掉。
-8. **worktree 不隔离运行时**：同一用户下跑着两个服务实例，裸跑 `pkill -f <名字>` 把另一个也杀了。→ 匹配进程一律带完整路径；共享资源加全局锁；端口按卡号分配。
-9. **zsh 遇到没有匹配的通配符会直接报错，中断整条 `&&` 链**，结果后台服务根本没起来。→ 参数里的 `*` `[` `?` 一律加引号；启动命令里不带通配符；清临时文件用精确文件名或 `find … -delete`。
-10. **执行者没有沙箱**（全权限，或审批自动放行）。→ 边界全靠 WORKER.md 的禁令和共享资源锁。凭据目录、常驻服务、系统设置要逐条点名禁止；上线前轮换执行者可能看到过的密钥。
-11. **执行者在回报里指出了审查漏掉的问题。** → 回报模板要保留「发现」一节，并认真看。范围外的发现立新卡；不少关键修复就是这么来的，包括一个 P0 安全漏洞。
-12. **拍板人当天改了规矩，上午一套说法、晚上一套说法，两套并存。** → 台账新开一条取代旧的；看板的派发规矩、总计划、守则在同一次提交里改齐。
-13. **改运行中的派发脚本，把它改坏了**（sh 会从磁盘重新读脚本）。→ 改脚本只用原子替换：先写临时文件，再 `mv`；改之前先备份。
-14. **没写规则就启动 agent，被安全分类器拦了。** → 先写好 WORKER.md 的边界再派。被拦了不要换个启动器绕过去。
-15. **文档里的启动命令已经过时，照着跑出了问题。** → 文档与现实不符时，先修文档。阶段收尾时做一次一致性扫描：死链、过时状态、目录树和磁盘对不上。
-16. **高风险卡最常见的两类 bug：信任边界和事务边界。** 例子：客户端 IP 取自可以伪造的请求头；基础件内部 commit，把调用方还没提交的改动一起带走了。→ 审查 🔴 卡时固定问两句：「这个输入谁能控制？」「这次提交会带走谁的改动？」
-17. **照文档推断的结论，被实测推翻了。** → 会改变架构的结论，先做 spike，用命令和输出说话。
-18. **大卡交给弱模型，返工率高。** → 把卡拆得更小；契约测试由总指挥先写好；核心件由总指挥亲自写，再交给独立审查。
-19. **macOS 自带的 bash 3.2 会把紧跟在 `$变量` 后面的中文字符吞进变量名。** 比如 `"$branch）"` 在 `set -u` 下会报 `unbound variable`，不开 `set -u` 时则静默变成空串。→ 中文文案里的变量一律写成 `${变量}`。查漏命令：`LC_ALL=C grep -nE '\$[A-Za-z_][A-Za-z0-9_]*[^ -~]' *.sh`。
+1. **You think you dispatched a strong model; the default cheap one ran.** → Check the log after dispatching to see the model actually used. Do not gamble a high-risk card on a difficulty-based auto-router.
+2. **A one-shot worker hits an interaction (sudo password, authorization dialog) and exits.** → State "offline-verifiable only" in the card; leave interactive and privileged steps to the orchestrator or the human. Decide who runs that step before dispatching.
+3. **Merges stopped being pushed; twelve commits piled up.** → After every merge run `git status -sb`; it must never show "ahead".
+4. **A change note claims "updated" but nothing changed.** → Verify every claim during review; a false claim is itself a must-fix.
+5. **A branch started from another unmerged branch, and the upstream was reworked later.** → Record the starting point on the board; update to the upstream's final version and re-run acceptance before merging.
+6. **An app's branch picker checked out in the main repo, or created its own worktree.** → Only use dispatch methods that take an explicit working directory; preflight pwd and branch before every dispatch.
+7. **Tests had order dependencies: 19 of 52 failed alone.** → During inspection run each test alone and in reverse order; fix it before starting parallel work.
+8. **Worktrees isolate files, not runtime: two service instances under one user, and a bare `pkill -f <name>` killed the wrong one.** → Always match processes by full path; lock shared resources globally; allocate ports per card.
+9. **zsh aborts on an unmatched glob and kills the whole `&&` chain**, so a background service never started. → Quote `*`, `[`, `?` in arguments; keep globs out of start commands; delete temp files by exact name or `find … -delete`.
+10. **Workers have no sandbox** (full access, or approvals auto-approved). → Boundaries rest on WORKER.md prohibitions and shared-resource locks. Name credential dirs, daemons, and system settings one by one; rotate any secret a worker could have seen before release.
+11. **A worker's report pointed out something review missed.** → Keep a "findings" section in the report template and read it. Turn out-of-scope findings into new cards; several critical fixes came from here, including a P0 security hole.
+12. **The human changed a rule mid-day; two versions coexisted.** → Open a new ledger entry that supersedes the old one; change the board rules, master plan, and worker rules in the same commit.
+13. **Editing a running dispatch script broke it** (sh re-reads the script from disk). → Only replace scripts atomically: write a temp file, then `mv`; back up first.
+14. **Starting an agent without written rules got blocked by a safety classifier.** → Write WORKER.md boundaries first. Do not switch launchers to get around a block.
+15. **The documented start command was stale and failed when followed.** → When docs disagree with reality, fix the docs first. At phase close, run a consistency scan: dead links, stale status, directory tree vs disk.
+16. **The two most common high-risk bugs are trust boundaries and transaction boundaries.** Examples: client IP taken from a forgeable header; shared infrastructure committing the caller's uncommitted changes. → Always ask two questions on a 🔴 card: "who controls this input?" and "whose changes does this commit carry?"
+17. **A conclusion inferred from docs was overturned by measurement.** → For any decision that changes architecture, run a spike and let commands and output speak.
+18. **Large cards given to weak models have a high rework rate.** → Split smaller; have the orchestrator write the contract tests first; write core pieces yourself and hand them to an independent reviewer.
+19. **macOS's bundled bash 3.2 swallows non-ASCII characters that follow `$var` into the variable name.** With `set -u` this raises `unbound variable`; without it the value silently becomes empty. → Always write `${var}` when non-ASCII text follows. Find leftovers with: `LC_ALL=C grep -nE '\$[A-Za-z_][A-Za-z0-9_]*[^ -~]' *.sh`.

@@ -1,84 +1,84 @@
-# 拆卡与写卡
+# Writing task cards
 
-模板：
-- 实现卡：`templates/task-card.md`
-- spike 卡：`templates/spike-card.md`
+Templates:
+- implementation card: `templates/task-card.md`
+- spike card: `templates/spike-card.md`
 
-项目里另有一份快照，在 `docs/plan/templates/`。
+The project also keeps a snapshot under `docs/plan/templates/`.
 
-## 怎么拆
+## How to split
 
-- **按契约边界拆**：一张卡产出一个契约（函数签名、表结构、端点、文件格式），下一张卡消费它。上游没合并时，下游只能写 mock 或契约测试，不能假设上游已经实现。
-- **规模**：S ≤ 半天，M ≈ 1 天，L ≈ 2 天，超过 L 必须拆。L 卡要在卡尾写好「预设拆分点」，超时就按这个点拆。执行者的模型越弱，卡要拆得越小。
-- **风险分离**：钱、鉴权、隔离相关的改动，不要和页面、重构混在一张卡里。
-- **编号按 Epic 分段**：E1 对应 T-1xx，E2 对应 T-2xx，以此类推。这样一眼能看出归属，中途插卡也不打乱编号。spike 卡用 S-NN。
-- **范围外的发现立新卡**：审查或回报里发现的问题，开一张新卡，编号接在同一段后面；在新卡的背景里写清是从哪张卡发现的。
+- **Split along contract boundaries.** One card produces one contract (function signature, table, endpoint, file format); the next card consumes it. Until the upstream card merges, downstream cards may only write mocks or contract tests — never assume the upstream implementation exists.
+- **Size**: S ≤ half a day, M ≈ one day, L ≈ two days. Anything larger must be split. An L card states a "pre-planned split point" so it can be cut when it overruns. The weaker the worker's model, the smaller the card.
+- **Separate risk.** Money, auth, and isolation changes do not share a card with pages or refactors.
+- **Number by epic**: E1 → T-1xx, E2 → T-2xx, and so on. Spike cards use S-NN. Insertions keep the segment, so numbers never collide.
+- **Out-of-scope findings become new cards.** Number them in the same segment and state in the new card's background which card found the issue.
 
-## 滚动展开
+## Rolling expansion
 
-- `tasks.md` 里每张卡都有一行，但只展开**当前波次**的卡。后面的卡依赖前面产出的契约，现在写细了只会过时。
-- 早就写好的卡，派之前要**按当前代码再复核一遍**：行号、文件名、依赖的契约还对不对。可以在卡顶挂一句：「⚠️ 前置卡合并后由总指挥复核，确认后再标可派」。
+- Every card gets one line in `tasks.md`; only the **current wave** is expanded into full cards. Later cards depend on contracts that do not exist yet; writing them in detail now only creates stale text.
+- Before dispatching an old card, **re-check it against the current code**: line numbers, file names, and contracts may have moved. Optionally put a banner at the top: "⚠️ re-verify after the prerequisite card merges, then mark ready."
 
-## 一张好卡的要素
+## Anatomy of a good card
 
-| 段 | 要点 |
+| Section | Content |
 |---|---|
-| 派发口令（卡顶） | 固定一句话，用绝对路径：读 WORKER.md 和本卡，在 worktree X（分支 Y）里执行，按模板回报。派发时有额外限制（如「只做到离线可验证」）的，也写进口令 |
-| 元信息表 | Epic / 波次、执行者（和模型要求）、依赖（卡号、是否已合并、起点分支）、规模、标记、热点文件锁 |
-| 背景 | 为什么现在做，附**实测证据**：命令加输出、`文件:行号`。不要只写结论 |
-| 目标 | 做完之后什么成立，一两句话 |
-| 必读 | 具体的文件路径；ADR 具体到第几节 |
-| 契约 | 其他卡依赖的名字，执行者必须照写 |
-| 范围 | 编号列表，细到可以直接执行 |
-| 不做 | 容易被顺手做掉的相邻工作；外加一句「不改 X 就做不了时，停下回报 blocked」 |
-| 验收 | 能直接跑的命令，加预期输出（具体数字）；在 worktree 里跑 |
-| 回报额外附上 | 例如新旧测试名对应表、补了哪些前置数据 |
+| Dispatch prompt (top) | One fixed sentence with absolute paths: read WORKER.md and this card, work in worktree X (branch Y), report with the template. Extra restrictions known at dispatch time go here too ("offline-verifiable only") |
+| Metadata table | Epic / wave, worker (and model requirement), dependencies (card, merged?, starting branch), size, flags, hot-file lock |
+| Background | Why now, with **measured evidence**: commands and output, `file:line`. Not conclusions alone |
+| Goal | What will be true when done, one or two sentences |
+| Required reading | Specific file paths; ADR sections |
+| Contract | Names other cards depend on; the worker must match them exactly |
+| Scope | Numbered list, fine-grained enough to execute directly |
+| Not doing | Adjacent work that is tempting to do; plus "if you cannot finish without changing X, stop and report `blocked`" |
+| Acceptance | Runnable commands with expected output (specific numbers), executed in the worktree |
+| Extra reporting | e.g. old→new test-name mapping, preconditions added |
 
-## 验收命令怎么写才防作弊
+## Acceptance commands that resist cheating
 
-- **数字要具体**：写「预期：52 passed」，不写「测试通过」。
-- **测试不许变少、变弱**：测试数不少于原来；断言行数不少于原来，例如 `grep -c -E '^\s*assert ' tests/*.py`。
-- **测试要真隔离**：逐个单跑、逆序跑都要全绿。会改测试的卡必须加这一条。
-- **结构不变式**：例如迁移只有一个 head；`git status --short` 为空；用 `grep` 数不该出现的模式，结果为 0（比如金额代码里出现 `float`）。
-- **文档 / 调研卡**：文件存在，小节数、出处链接数不低于下限。
-- **🔴 卡**：列出三类测试的用例名，分别是幂等（重复请求只生效一次）、并发（多线程下结果精确）、越权（访问别人的资源返回 401 / 403 / 404）。
+- **Be specific**: "expected: 52 passed", not "tests pass".
+- **Tests may not shrink or weaken**: test count no lower than before; assertion count no lower, e.g. `grep -c -E '^\s*assert ' tests/*.py`.
+- **Tests must be truly isolated**: each one alone and in reverse order must be green. Any card that edits tests must include this.
+- **Structural invariants**: exactly one migration head; `git status --short` empty; `grep` for forbidden patterns returns 0 (e.g. `float` in money code).
+- **Doc / research cards**: file exists; section count and source-link count above a floor.
+- **🔴 cards**: name the three test cases — idempotency (duplicate request takes effect once), concurrency (multi-threaded result exact), authorization (another user's resource returns 401 / 403 / 404).
 
-## 标记的含义
+## What the flags mean
 
-- 🔴 **高风险**（钱 / 鉴权 / 隔离 / 数据安全）：
-  - 上面三类测试必须覆盖；
-  - 总指挥逐行审，并做变异检验；
-  - 必要时总指挥亲自写，再另起独立审查。
-- 🔒 **共享资源**（真机、生产或常驻服务、全局配置、硬件）：
-  - 全局串行，先抢锁；
-  - 卡里**逐条**写出允许的操作和恢复清单：改前备份，收工恢复，再删掉备份；
-  - 需要人输密码或交互确认的步骤，写明留给总指挥或拍板人。
-- 🏛 **外部事项**：拍板人办，记进 `external.md`。
+- 🔴 **High risk** (money / auth / isolation / data safety):
+  - the three test classes above are mandatory;
+  - the orchestrator reviews line by line and runs mutation tests;
+  - when needed, the orchestrator writes it and an independent reviewer checks it.
+- 🔒 **Shared resource** (real hardware, production or daemon services, global config):
+  - globally serialized; take the lock first;
+  - the card lists, **item by item**, the allowed operations and the restore checklist: back up before, restore after, then delete the backup;
+  - steps needing a password or interactive confirmation are explicitly left to the orchestrator or the human.
+- 🏛 **External item**: the human handles it; record it in `external.md`.
 
-## 热点文件与迁移
+## Hot files and migrations
 
-- **热点文件**：路由注册、公共 schema、模型导出、依赖清单、主循环、迁移目录这类文件，同一时刻只给一张卡。登记在 `status.md` 的「热点文件锁」和卡的元信息表里。
-- **数据库迁移**：每张卡最多新增一个 revision。并行分支撞号时，由总指挥在合并时重排：把新 revision 的 `down_revision` 改指当前 head，保证 main 上永远只有一个 head。
-- **本地起服务**：端口用「基数 + 卡号后两位」，数据用临时库或临时目录，绝不碰常驻服务。
+- **Hot files**: route registration, shared schemas, model exports, dependency manifests, main loops, migration directories. One card at a time. Record the owner in `status.md` and in the card's metadata.
+- **Database migrations**: at most one new revision per card. If parallel branches collide, the orchestrator re-points the new revision's `down_revision` at the current head during merge, so the main branch always has exactly one head.
+- **Local services**: use port "base + last two digits of the card number"; use a temporary database or directory; never touch a daemon service.
 
-## spike 卡（S-NN）
+## Spike cards (S-NN)
 
-用于「答案会改变架构」的技术不确定性。
+For technical uncertainty whose answer would change the architecture.
 
-- **写成要回答的问题清单**：每一问都要有实测证据（命令加输出），不接受只引用文档。实测常常会推翻文档。
-- **限时**：规模定为 S，超时就交付已经查清的部分。
-- **只产出一份文档**，依次包括：
-  1. 结论速览：每问一句话，标明可行 / 不可行 / 有条件可行；
-  2. 逐题证据：每段不超过 15 行；
-  3. 对 ADR 的建议；
-  4. 已恢复清单。
-- **合并之后**：结论回填到 ADR，挖出来的问题立新卡。
+- **Write it as a list of questions to answer.** Every answer needs measured evidence (command + output); citing docs is not enough. Measurements routinely overturn docs.
+- **Time-boxed**: size S; when time runs out, deliver what is already established.
+- **One document only**, containing:
+  1. verdict summary: one line per question, marked feasible / infeasible / feasible with conditions;
+  2. evidence per question: at most 15 lines each;
+  3. recommendation for the ADR;
+  4. restore checklist.
+- **After merging**: fold verdicts into the ADR; turn discovered problems into new cards.
 
-## 分支起点
+## Branch starting point
 
-默认从派发时的 main 切出。
+By default, cut from the integration branch at dispatch time.
 
-必须基于未合并的分支时（例如要用上游刚写的函数）：
-1. 用 `wt.sh new <卡号> <slug> --from <上游分支>` 建 worktree；
-2. 在卡和看板备注里写明起点；
-3. 合并前，先把它更新到上游的最终版本，再复跑验收。
+When a card must build on an unmerged branch (e.g. it needs a function the upstream card just wrote):
+1. create the worktree with `wt.sh new <card> <slug> --from <upstream branch>`;
+2. note the starting point in the card and on the board;
+3. before merging, update it to the upstream's final version and re-run acceptance.

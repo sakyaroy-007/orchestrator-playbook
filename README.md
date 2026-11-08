@@ -116,8 +116,7 @@ This skill does not depend on any model provider, gateway, or routing service. T
 | `SKILL.zh.md` | Chinese edition of the skill |
 | `AGENTS.md` | Rules for agents editing **this repository** (not its users) |
 | `CHANGELOG.md` | Release history |
-| `references/bootstrap.md` | Start a project, take over as orchestrator, per-session checklists |
-| `references/handoff-files.md` | `.orchestrator/TEAM.md` / `PLAYBOOK.md`: how to hand off cleanly |
+| `references/bootstrap.md` | Start a project, take over as orchestrator, per-session checklists || `references/handoff-files.md` | `.orchestrator/TEAM.md` / `PLAYBOOK.md`: how to hand off cleanly |
 | `references/cards.md` | How to split and write task cards, spikes, anti-cheat acceptance commands |
 | `references/dispatch.md` | Preflight checks, dispatch channels, worker management |
 | `references/review.md` | Review checklist, mutation testing, independent review, merge pipeline |
@@ -129,7 +128,7 @@ This skill does not depend on any model provider, gateway, or routing service. T
 | `scripts/dispatch.sh` | Dispatcher for Claude / Codex / Hermes / DeepSeek Harness |
 | `scripts/selftest.sh` | 73-check end-to-end test of the scripts (temp repos only) |
 
-`references/` and `templates/` are currently in Chinese; the workflows are the same. Translations are welcome.
+`references/*.md` are English; `references/*.zh.md` are the Chinese editions. `templates/` are still Chinese — placeholders use the marker `【待填】`, which means "to fill". Translations of templates are welcome.
 
 ## Requirements
 

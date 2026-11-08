@@ -1,109 +1,88 @@
-# 开局、接手、每个会话的开工与收工
+# Bootstrap, takeover, and session checklists
 
-## A. 新项目开局
+## A. Starting a new project
 
-按顺序做，每一步都留证据。
+Do these in order, and keep evidence for each step.
 
-### 1. 拿到起点决定（Q-00）
+### 1. Get the starting decisions (Q-00)
 
-向拍板人问清下面四件事，写进 `questions.md` 的 Q-00，状态填「已答」：
-- **目标**：做到什么算「完成」，一句话说清，并写明谁来验收。
-- **红线**：哪些事不论什么理由都不做。
-- **版本化**：有没有远端，私有还是公开，谁能推。
-- **派发**：总指挥直接派（需要放行哪些命令），还是拍板人转派。
+Ask the human four things and record them as Q-00 in `questions.md`, marked answered:
 
-对话或文档里已经说过的不要再问，直接引用。
+- **Goal**: what counts as "done", in one sentence, and who signs off.
+- **Red lines**: what will never be done, for any reason.
+- **Version control**: is there a remote, private or public, who may push.
+- **Dispatch**: does the orchestrator dispatch directly (which commands are allowed), or does the human relay?
 
-### 2. 体检（全部亲自核实，不抄旧文档）
+Do not re-ask what the conversation or existing docs already answer; cite them instead.
 
-- **测试**：先跑全量，再**逐个单跑**、**逆序跑**。顺序依赖会让并行开发随机变红。源项目体检时，52 个测试里有 19 个单跑会失败。
-- **构建、启动、冒烟**：能不能从零起来？把真实命令记下来。
-- **凭据**：扫一遍历史里的密钥，例如 `git log -p | grep -iE 'secret|token|password|BEGIN .*PRIVATE'`，按项目调整关键词。再看凭据文件有没有进 `.gitignore`。
-- **信任边界**：读关键路径。谁能调这个端点？时长、金额、身份取自谁？
-- **环境事实**：执行者有没有沙箱、默认模型是什么、本机缺哪些工具。这些会影响卡怎么写。
-- **产出**：写进总计划 §1，包括两部分：
-  - 「已扎实、保留」清单；
-  - 「硬缺口」表，列为 `# | 缺口 | 证据（文件:行号 / 命令输出）| 归属卡`。
+### 2. Inspect (verify everything yourself; do not copy old docs)
 
-### 3. 铺控制面
+- **Tests**: run the full suite, then **each test alone**, then **in reverse order**. Order dependencies make parallel work fail at random. The source project had 19 of 52 tests fail when run alone.
+- **Build, start, smoke**: does it come up from zero? Record the real commands.
+- **Credentials**: scan history for secrets, e.g. `git log -p | grep -iE 'secret|token|password|BEGIN .*PRIVATE'` (adapt the pattern). Check that credential files are gitignored.
+- **Trust boundaries**: read the critical paths. Who can call this endpoint? Who supplies durations, amounts, identities?
+- **Environment facts**: do workers have sandboxes, what are the default models, what is missing on this machine? These determine how cards are written.
+- **Output**: write section 1 of the master plan with two parts:
+  - "solid, keep" list;
+  - "hard gaps" table: `# | gap | evidence (file:line / command output) | owning card`.
+
+### 3. Scaffold the control plane
 
 ```bash
-bash ~/.agents/skills/orchestrator-playbook/scripts/init-plan.sh <主仓> \
-     --project <名> --decider <拍板人> --orchestrator <总指挥> \
-     [--wt-base <目录>] [--main <分支>] [--handoff <交接文件>] [--dry-run]
+bash scripts/init-plan.sh <repo> \
+     --project <name> --decider <human> --orchestrator <orchestrator> \
+     [--wt-base <dir>] [--main <branch>] [--handoff <handoff file>] [--agents-md AGENTS.md] [--dry-run]
 ```
 
-1. 先加 `--dry-run` 看会建哪些文件。已有的文件一律跳过；项目已经有交接文档的，用 `--handoff` 指过去。
-2. 把脚本最后打印的片段加进 `AGENTS.md`。执行者的客户端会自动读它，靠这段知道要先读 WORKER.md。
-3. 填 `【待填：…】`：
-   - **派第一张卡前**，WORKER.md 和 status.md 里必须一个都不剩。检查命令：`grep -n '【待填' docs/plan/WORKER.md docs/plan/status.md`。
-   - 重点是 WORKER.md §2 的「禁止碰」（凭据目录、常驻服务、真机资源）和 §3 的测试命令。
-   - 其余文件在 W0 收口前填完。
-4. 每个 worktree 要独立准备环境时（venv、node_modules、构建目录），写可执行的 `scripts/wt-setup.sh <worktree路径>`，`wt.sh new` 会自动调用它。
-5. 提交：`docs(plan): 铺控制面`。
+1. Run with `--dry-run` first. Existing files are never overwritten; if the project already has a handoff doc, point `--handoff` at it.
+2. Add the printed snippet to `AGENTS.md` (or let `--agents-md` do it). Worker clients read it and learn to read WORKER.md first.
+3. Fill every `【to fill】` marker:
+   - **Before the first card**, WORKER.md and status.md must have none left: `grep -rn '【' docs/plan/WORKER.md docs/plan/status.md`;
+   - the important ones are WORKER.md §2 "do not touch" (credential dirs, daemons, real hardware) and §3 test commands.
+4. If each worktree needs its own environment (venv, node_modules, build dir), write an executable `scripts/wt-setup.sh <worktree>`; `wt.sh new` calls it automatically.
+5. Commit: `docs(plan): scaffold the control plane`.
 
-### 4. 写总计划（`docs/plan/README.md`）
+### 4. Write the master plan (`docs/plan/README.md`)
 
-- **一页纸**：
-  - 离目标还有多远；
-  - 关键路径（常常不在代码，而在外部资质、账号、审批）；
-  - 粗估工期；
-  - 验收门。
-- **目标定义**：
-  - 黄金路径：端到端，谁能走通什么；
-  - 底线：钱 / 安全 / 可恢复 / 合规，各一句可验证的标准；
-  - **明确不做**的事。
-- **ADR**：只有约束多张卡的决定才写 ADR。ADR-001 永远是「协作与分支」，覆盖集成线、worktree 布局、共享资源、热点文件、迁移规则。
-- **后续结构**，依次是：
-  - Epic：写清目标、出口标准、主执行者、卡数；
-  - 波次；
-  - 关键路径；
-  - 风险登记：写清触发信号、预案、owner。
+- **One page**: how far from the goal; the critical path (often external licenses, accounts, approvals, not code); rough schedule; acceptance gates.
+- **Definition of done**: golden paths end-to-end; bottom lines for money / security / recoverability / compliance, each one verifiable; and an explicit **not doing** list.
+- **ADRs**: only decisions that constrain multiple cards. ADR-001 is always "collaboration and branching": integration line, worktree layout, shared resources, hot files, migration rules.
+- **Then**: epics (goal, exit criteria, main worker, card count), waves, critical path, risk register (trigger, mitigation, owner).
 
-### 5. 拆卡
+### 5. Split cards
 
-- 所有卡先在 `tasks.md` 里各写一行；只把当前波次展开成完整卡（见 `references/cards.md`）。
-- **W0 只做地基**：测试隔离、CI、配置、迁移、worktree 工具，目的是让并行开发变安全。基线不绿就不叠功能。
-- 外部事项进 `external.md`，能启动的第一周就全部启动。
+- Put every card in `tasks.md` as one line; expand only the current wave into full cards (see `references/cards.md`).
+- **Wave 0 is foundations only**: test isolation, CI, configuration, migrations, worktree tooling. The point is to make parallel work safe. Do not stack features on a red baseline.
+- External items go to `external.md`; start everything that can start in week one.
 
-### 6. 开波
+### 6. Open the wave
 
-给拍板人一页纸：计划摘要，加上本周拍板人清单（questions 里待答的和 external 里待办的，按顺序列）。拿到派发授权后开始派 W0。
+Give the human one page: plan summary plus this week's list (unanswered questions and external items, in order). Start W0 once dispatch is authorized.
 
-## B. 接手总指挥（换 agent / 换会话 / 上下文压缩之后）
+## B. Taking over as orchestrator (new agent / new session / after compaction)
 
-1. **按顺序读**：
-   1. `AGENTS.md`
-   2. 交接文档
-   3. `docs/plan/README.md` 的 §0 和「协作规程」
-   4. `status.md`
-   5. `questions.md`：所有「已答」都有约束力，不重议
-   6. `WORKER.md`
-2. **核实现场**。文档可能落后于现实：
+1. **Read in order**: `AGENTS.md` → handoff doc → `docs/plan/README.md` §0 and the collaboration section → `status.md` → `questions.md` (everything answered is binding; do not relitigate) → `WORKER.md` → `.orchestrator/TEAM.md`.
+2. **Verify the live state**; docs may lag:
    ```bash
-   git log --oneline -15; git status -sb        # 有没有没推的、没提交的
-   scripts/wt.sh ls                             # 哪些卡在做，领先 / 落后多少，有没有未提交改动
-   git -C <worktree> log --oneline main..HEAD   # 「进行中 / 待审」的卡有没有新提交
-   ls -t <派发日志目录> | head                   # 最近的派发与结束码
+   git log --oneline -15; git status -sb        # unpushed / uncommitted work
+   scripts/wt.sh ls                             # active cards, ahead/behind, dirty worktrees
+   git -C <worktree> log --oneline main..HEAD   # new commits on in-flight / in-review cards
+   ls -t <dispatch log dir> | head              # recent dispatches and exit codes
    ```
-   另外查共享资源锁的 owner 和后台服务进程。
-3. **先还文档欠账**：看板和现实对不上，先改看板，再干别的。
-4. **核对你自己的能力**：
-   - 派发通道；
-   - 权限：能不能直接派，能不能推，放行的是不是一条精确命令；
-   - 模型。
+   Also check shared-resource lock owners and running services.
+3. **Pay documentation debt first**: if the board disagrees with reality, fix the board before anything else.
+4. **Check your own capabilities**: dispatch channel; permissions (direct dispatch? push? a single exact command?); model. Record differences from the previous holder in `status.md` and `TEAM.md`.
+5. **Send the human a one-paragraph takeover report**: current wave, cards in review, blockers, decisions needed. Then enter the session loop.
 
-   和上一任不同的地方，写进 `status.md` 的花名册与派发规矩。
-5. **给拍板人一段话的接手报告**：当前波次、待审几张、什么在阻塞、需要拍板什么。然后进入主循环。
+## C. Every session
 
-## C. 每个会话
+**Start**: handoff doc → board → decision ledger → verify the live state → review before dispatching.
 
-**开工**：依次是交接文档、看板、台账、核实现场，然后先审后派。
+**Wrap-up checklist**:
 
-**收工清单**：
-- [ ] `status.md` 每一行与现实一致：状态、commit、日志路径，备注里有关键验收数字
-- [ ] 交接文档的「当前状态」「下一步」已更新，用绝对日期
-- [ ] 当天的拍板已回填到 ADR、卡、台账
-- [ ] `git status -sb` 不显示 ahead，控制面的改动已提交
-- [ ] 已合并卡的 worktree 已用 `wt.sh rm` 清掉
-- [ ] 你起的后台进程要么已停，要么记在交接文档里
+- [ ] every row in `status.md` matches reality: state, commit, log path, key acceptance numbers in the note
+- [ ] handoff doc "current state" and "next steps" updated with absolute dates
+- [ ] today's decisions folded back into ADRs, cards, and the ledger
+- [ ] `git status -sb` does not show "ahead"; control-plane changes committed
+- [ ] merged cards' worktrees removed with `wt.sh rm`
+- [ ] background processes you started are stopped or recorded in the handoff doc

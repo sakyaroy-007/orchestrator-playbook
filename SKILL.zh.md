@@ -158,10 +158,10 @@ disable-model-invocation: true
    - `scripts/wt.sh ls`：哪些卡在做；
    - 「进行中 / 待审」卡的分支有没有新提交，派发日志是什么情况。
    文档和现实对不上，先修文档。
-2. **先收货**：待审的卡优先审（`references/review.md`）。通过就合并、同步文档、推送、清理 worktree；不通过就写 `reviews/T-NNN-rN.md`，派回原执行者。
-3. **再派新卡**：从 `tasks.md` 挑卡（依赖已满足、不撞热点锁、不超并行上限）→ 按当前代码展开成完整卡（`references/cards.md`）→ `scripts/wt.sh new <卡号> <slug>` → 预检 → 派发（`references/dispatch.md`）→ 看板标「进行中」。
+2. **先收货**：待审的卡优先审（`references/review.zh.md`）。通过就合并、同步文档、推送、清理 worktree；不通过就写 `reviews/T-NNN-rN.md`，派回原执行者。
+3. **再派新卡**：从 `tasks.md` 挑卡（依赖已满足、不撞热点锁、不超并行上限）→ 按当前代码展开成完整卡（`references/cards.zh.md`）→ `scripts/wt.sh new <卡号> <slug>` → 预检 → 派发（`references/dispatch.zh.md`）→ 看板标「进行中」。
 4. **等的时候**：派发放后台，不空转轮询。写下一批卡、整理台账、把 spike 结论回填 ADR、准备给拍板人的清单。
-5. **需要拍板时**：先写进 `questions.md`，攒成一批再问。一次不超过 3 个，每个带选项和推荐（`references/stakeholder.md`）。
+5. **需要拍板时**：先写进 `questions.md`，攒成一批再问。一次不超过 3 个，每个带选项和推荐（`references/stakeholder.zh.md`）。
 6. **收工**：看板每行准确；交接文档已更新；已答问题回填；`git status -sb` 不显示 ahead；已合并卡的 worktree 已清。
 
 ## 开局与接手
@@ -174,10 +174,10 @@ disable-model-invocation: true
    bash scripts/init-plan.sh <主仓路径> \
         --project <项目名> --decider <拍板人称呼> --orchestrator <你的称呼>
    ```
-   脚本不覆盖已有文件。铺完后，WORKER.md 和 status.md 里的 `【待填】` 要清零，才能派第一张卡。详见 `references/bootstrap.md`。
+   脚本不覆盖已有文件。铺完后，WORKER.md 和 status.md 里的 `【待填】` 要清零，才能派第一张卡。详见 `references/bootstrap.zh.md`。
 3. W0 只做「让并行开发变安全」的地基卡。
 
-**接手别人的总指挥位置**：按上面「接手仪式」做。详见 `references/bootstrap.md`。
+**接手别人的总指挥位置**：按上面「接手仪式」做。详见 `references/bootstrap.zh.md`。
 
 ## 模型与配置（用户自选，本 skill 只推荐）
 
@@ -194,13 +194,13 @@ disable-model-invocation: true
 
 | 文件 | 什么时候读 |
 |---|---|
-| `references/bootstrap.md` | 新项目开局、接手总指挥、每个会话的开工 / 收工清单 |
-| `references/handoff-files.md` | `.orchestrator/` 各文件怎么写，换总指挥时的文件清单 |
-| `references/cards.md` | 拆卡、写卡、spike、契约、锁、滚动展开、防作弊的验收命令 |
-| `references/dispatch.md` | 派发前检查、预检、各种派发通道、模型与分工、收货 |
-| `references/review.md` | 审查清单、变异检验、独立审查、合并流水线、返工单 |
-| `references/stakeholder.md` | 问题台账、外部事项、怎么问、汇报节奏 |
-| `references/lessons.md` | 踩过的坑。派发前、合并前各扫一眼 |
+| `references/bootstrap.zh.md` | 新项目开局、接手总指挥、每个会话的开工 / 收工清单 |
+| `references/handoff-files.zh.md` | `.orchestrator/` 各文件怎么写，换总指挥时的文件清单 |
+| `references/cards.zh.md` | 拆卡、写卡、spike、契约、锁、滚动展开、防作弊的验收命令 |
+| `references/dispatch.zh.md` | 派发前检查、预检、各种派发通道、模型与分工、收货 |
+| `references/review.zh.md` | 审查清单、变异检验、独立审查、合并流水线、返工单 |
+| `references/stakeholder.zh.md` | 问题台账、外部事项、怎么问、汇报节奏 |
+| `references/lessons.zh.md` | 踩过的坑。派发前、合并前各扫一眼 |
 | `templates/*` | `init-plan.sh` 填好占位符后铺进项目；卡 / spike / 审查 / ADR 模板另存一份到 `docs/plan/templates/` |
 | `scripts/init-plan.sh` | 铺控制面（只新建，不覆盖；`--dry-run` 先看会建什么） |
 | `scripts/wt.sh` | worktree 管理：`new` / `ls` / `path` / `rm`（没合并时拒绝删除） |
@@ -209,6 +209,6 @@ disable-model-invocation: true
 
 ## 改进本 skill
 
-- 踩到**通用**的新坑（换个项目也会踩），一条一行，连同对策追加到 `references/lessons.md`。
+- 踩到**通用**的新坑（换个项目也会踩），一条一行，连同对策追加到 `references/lessons.zh.md`。
 - 项目特有的事实写进那个项目的 AGENTS.md 或交接文档，不要写进这里。
 - 本 skill 的原件在 `~/.agents/skills/orchestrator-playbook/`（按你机器上的安装位置）。改之前备份到 `~/.agents/skill-install-state/backups/`，改完跑 `scripts/selftest.sh`，必须全绿。

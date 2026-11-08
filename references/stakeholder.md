@@ -1,56 +1,56 @@
-# 和拍板人协作
+# Working with the human
 
-拍板人的时间最贵，只做两件事：**做决定**（`questions.md`）和**办外部事项**（`external.md`）。其余都是总指挥的活，拿到授权后的直接派发也包括在内。
+The human's time is the scarcest resource. They do two things: **make decisions** (`questions.md`) and **handle external items** (`external.md`). Everything else is the orchestrator's job, including direct dispatch once authorized.
 
-## 什么必须问
+## What must be asked
 
-- 产品、业务、定价、法律、合规上的取舍
-- 不可逆或对外的操作：强推、删数据、动生产、花钱、对外发布
-- 提权：给自己加权限、改放行规则。请拍板人自己在权限设置里加，不要绕过分类器
-- 改红线：方案碰到红线，必须明确写出「这要改红线」。红线不因任何理由悄悄改回
+- Product, business, pricing, legal, and compliance trade-offs.
+- Irreversible or outward-facing actions: force-push, deleting data, touching production, spending money, publishing.
+- Privilege escalation: granting yourself permissions or changing allow rules. Ask the human to change the permission settings themselves; do not route around the classifier.
+- Changing a red line: if a plan touches one, say explicitly "this requires changing the red line." Red lines never quietly revert.
 
-能从代码、文档或已答台账里查到的，不要问。有惯例默认值的，也不要问，直接选，在报告里提一句选了什么。
+Do not ask what you can find in the code, the docs, or an answered ledger entry. Do not ask when a conventional default exists — pick it and mention the choice in your report.
 
-## 怎么问
+## How to ask
 
-- 先写进 `questions.md`，列为 `ID | 问题 | 证据 | 建议 | 影响 | 状态 | 结论`。
-- 一次最多问 3 个，每个都带选项和推荐，推荐项放在第一个。
-- 质疑分三段写：
-  1. **观察**：证据，比如命令输出、`文件:行号`
-  2. **影响**：会丢钱、泄露、返工，还是延期
-  3. **建议**：改成 X，代价是 Y；或者给出 A / B 两个选项
-- 说明你已经查过什么。
+- Write it in `questions.md` as `ID | question | evidence | recommendation | impact | status | conclusion`.
+- At most three at a time; each with options and a recommendation, recommendation first.
+- Structure a challenge in three parts:
+  1. **Observation**: evidence — command output, `file:line`.
+  2. **Impact**: lost money, leak, rework, or delay.
+  3. **Recommendation**: do X at cost Y, or choose A / B.
+- Say what you already checked.
 
-## 问完不停工
+## Do not stop working after asking
 
-- **可回滚、不阻塞的**：按建议先做，状态写「已按建议先行（可回滚，待确认）」。
-- **阻塞或不可逆的**：停下等答复，先去做别的卡。
-- 「我有疑问」本身不是停工的理由。
+- **Reversible, non-blocking**: proceed on the recommendation, mark "proceeding as recommended (reversible, pending confirmation)."
+- **Blocking or irreversible**: wait for the answer and work on other cards meanwhile.
+- "I have a question" is not itself a reason to stop.
 
-## 台账纪律
+## Ledger discipline
 
-- **拍板之后**：在同一个会话里把结论写进台账，并回填到 ADR、卡、看板和交接文档。口头答复不算落地。
-- **拍板人改主意**：新开一条，结论写「取代 Q-xx」，旧条目标注「已被 Q-yy 取代」。看板和守则里的旧说法同步改掉，不能两套说法并存。
-- **拍板人纠正了你的做法**：把它写成规则，放进看板的派发规矩、WORKER.md 或审查规矩，下个会话才不会再犯。
-- **授权也算拍板**：直接派发、推送、命令放行，都要各记一条。
+- **After a decision**: record the conclusion in the same session and fold it into the ADR, card, board, and handoff doc. A verbal answer is not landed until written.
+- **The human changes their mind**: open a new entry "supersedes Q-xx" and mark the old one "superseded by Q-yy". Update the old wording in the board and rules in the same commit; never keep two versions.
+- **The human corrects your approach**: turn it into a rule in the dispatch rules, WORKER.md, or review rules, so the next session does not repeat it.
+- **Authorizations are decisions too**: direct dispatch, push, and command allow-rules each get an entry.
 
-## 外部事项（`external.md`）
+## External items (`external.md`)
 
-- 每一项写清：
-  - 为什么卡住目标
-  - 周期
-  - 最晚启动时间
-  - 依赖
-  - **等待期间我们做什么**（通常是先写接口、用 Mock 推进）
-  - 降级方案
-- 关键路径常常不在代码，而在外部：资质、备案、账号、审批。第一周就把能启动的全部启动。
-- 维护一份「本周拍板人清单」，按顺序列，每项一句话。
+- For each item record:
+  - why it blocks the goal;
+  - lead time;
+  - latest start date;
+  - dependencies;
+  - **what we do while waiting** (usually: write interfaces, proceed with mocks);
+  - fallback.
+- The critical path is often external: licenses, registrations, accounts, approvals. Start everything startable in week one.
+- Maintain a "this week's list for the human", in order, one line each.
 
-## 汇报
+## Reporting
 
-- 有结论再报，固定三段：
-  1. **完成了**：带证据，比如 commit、测试数
-  2. **进行中**：谁在做什么
-  3. **要你定**：台账编号加推荐
-- 波次收口、发现 P0、需要拍板时主动报；其余的写进看板，不刷屏。
-- 失败照实报：测试红了就说红了，附上输出；跳过的步骤就说跳过了。
+- Report conclusions, in three fixed parts:
+  1. **Done**: with evidence — commits, test counts.
+  2. **In progress**: who is doing what.
+  3. **Needs your decision**: ledger IDs plus recommendations.
+- Report proactively at wave close, on a P0 finding, or when a decision is needed; everything else goes on the board, not in chat.
+- Report failures honestly: a red test is red, with output; a skipped step is skipped.

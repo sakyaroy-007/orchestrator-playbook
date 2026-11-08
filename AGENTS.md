@@ -10,8 +10,8 @@ This repository **is a skill**, not a project that uses the skill.
 | Path | What it is |
 |---|---|
 | `SKILL.md` | The skill itself (English). `SKILL.zh.md` is the Chinese edition; clients load only `SKILL.md`. |
-| `references/` | Deep-dive documentation, loaded on demand (currently Chinese). |
-| `templates/` | Control-plane files with `{{placeholders}}` and `【待填】` markers. |
+| `references/` | Deep-dive documentation, loaded on demand. `*.md` are English; `*.zh.md` are the Chinese editions. |
+| `templates/` | Control-plane files with `{{placeholders}}` and `【待填】` (to-fill) markers; still Chinese. |
 | `scripts/` | `init-plan.sh`, `wt.sh`, `dispatch.sh`, `selftest.sh`. |
 | `.claude-plugin/` | Claude Code plugin + marketplace manifests. |
 | `.codex-plugin/` | Codex plugin manifest. |

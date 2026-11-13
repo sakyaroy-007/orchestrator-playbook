@@ -54,7 +54,6 @@ jobs:
       run:
         shell: bash
     env:
-      CLAUDE_CONFIG_DIR: ${{ runner.temp }}/playbook-validator-config
       CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: '1'
     steps:
       - uses: actions/checkout@v4
@@ -69,6 +68,8 @@ jobs:
           --no-save --package-lock=false --no-audit --no-fund
           @anthropic-ai/claude-code@2.1.323
       - name: Validate with the native CLI without a model request
+        env:
+          CLAUDE_CONFIG_DIR: ${{ runner.temp }}/playbook-validator-config
         run: |
           unset ANTHROPIC_API_KEY ANTHROPIC_AUTH_TOKEN CLAUDE_CODE_OAUTH_TOKEN
           "$RUNNER_TEMP/playbook-validator/node_modules/.bin/claude" plugin validate .

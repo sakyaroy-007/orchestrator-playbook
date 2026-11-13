@@ -19,7 +19,7 @@ for f in docs/plan/README.md docs/plan/WORKER.md docs/plan/status.md docs/plan/t
          docs/plan/external.md "docs/plan/decisions/ADR-001-协作与分支.md" docs/plan/templates/task-card.md \
          docs/plan/templates/spike-card.md docs/plan/templates/review.md docs/plan/templates/ADR.md \
          .orchestrator/TEAM.md .orchestrator/PLAYBOOK.md \
-         docs/changes/README.md HANDOFF.md scripts/wt.sh docs/plan/tasks/.gitkeep docs/plan/reviews/.gitkeep; do
+         docs/changes/README.md HANDOFF.md scripts/wt.sh scripts/playbook.py docs/plan/tasks/.gitkeep docs/plan/reviews/.gitkeep; do
   check "生成 ${f}" test -f "$T/demo/${f}"
 done
 check "无残留 {{占位符}}" sh -c "! grep -rq '{{' '$T/demo/docs' '$T/demo/.orchestrator' '$T/demo/HANDOFF.md'"
@@ -92,7 +92,7 @@ bash "$S/scripts/init-plan.sh" "$T/old" --handoff 00_交接.md > "$T/old.out"
 check "不覆盖已有 WORKER.md" test "$(cat "$T/old/docs/plan/WORKER.md")" = "legacy"
 check "已有 ADR-001 不再新建" test "$(ls "$T/old/docs/plan/decisions" | wc -l | tr -d ' ')" = "1"
 check "指定了交接文件就不建 HANDOFF.md" test ! -e "$T/old/HANDOFF.md"
-check "AGENTS 片段引用指定的交接文件" grep -q '每次开工先读 `00_交接.md`' "$T/old.out"
+check "AGENTS 片段引用指定的交接文件" grep -qF '`00_交接.md`' "$T/old.out"
 check "缺的文件照常补上（status.md）" test -f "$T/old/docs/plan/status.md"
 
 echo "[6] dispatch.sh（桩，不调用真实 agent）"

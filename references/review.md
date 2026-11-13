@@ -1,71 +1,45 @@
-# Review and merge
+# Review, acceptance and integration
 
-The rule is **do not trust self-reports**. A worker saying "done" does not make it done. Every conclusion in a review must rest on evidence you produced yourself.
+A worker's `done` or exit 0 is a report, not acceptance. Follow project `review` policy and the actual impact of the change. [Lifecycle](lifecycle.md) defines ownership; [dispatch](dispatch.md) defines managed verify/guard commands. Do not turn every reversible documentation change into a full-suite or independent-agent review.
 
-## Review steps
+## Produce review evidence
 
-1. **See the whole picture**
-   ```bash
-   git -C <wt> status --short                     # must be empty
-   git -C <wt> log --oneline <main>..HEAD          # commits start with the card id; the last includes docs/changes/<card>.md
-   git -C <wt> diff --stat <main>...HEAD           # which files changed, any scope creep
-   ```
-2. **Re-run every acceptance command** in the card; if a number differs, send it back. Run the full suite once more; if the card touched tests, also run each test alone and in reverse order.
-3. **Read the full diff**, not just the summary. Look for four classes of problems:
-   - **Scope creep**: files outside the card, shared docs, drive-by refactors, dependency changes.
-   - **Fake tests**: `skip` / `xfail`, `|| true`, `try/except: pass`; deleted or weakened assertions; expected values copied from actual output; tests that never call the code under test.
-   - **Secrets and residue**: tokens, passwords, debug prints, breakpoints, personal absolute paths, temp files.
-   - **Irreversibility**: migrations without `downgrade`, destructive scripts, defaults that lose data.
-4. **Check the change note**: every "updated"/"verified" claim gets inspected. A claim that was written but not done is itself a must-fix.
-5. **Extra for high-risk (🔴) cards**:
-   - **Read line by line.** For every input ask "who controls this?" — that is the trust boundary. Typical bugs: forgeable request headers; client-reported durations, times, identities.
-   - **Transaction boundaries**: does shared infrastructure commit changes the caller had not committed? Do failure paths leave half-written data?
-   - **Concurrency and idempotency**: run concurrency tests repeatedly; try duplicate requests, replays, out-of-order events.
-   - **Mutation testing**: deliberately break one critical line (remove a lock, swap lock order, delete a validation) and confirm the tests go red; restore it and `diff` to prove it is back. A mutation the tests miss is a test gap and counts as a must-fix.
-6. **The report's "findings" section**: decide for each item — new card, decision ledger, or explicitly not doing (with the reason).
+1. Record the reviewed baseline, current HEAD, branch/work directory, configuration revision and dirty/untracked state. Distinguish pre-existing changes from the card's patch; never erase dirty work to obtain a clean screenshot.
+2. Read the full scoped diff and change note, including uncommitted delivery if commits were not authorized. Check each claimed update against the files.
+3. Run the card's relevant acceptance commands against the actual result, with cwd, exit status, observed output and covered scope. If acceptance is stale, explain and revise it within authorized scope instead of inventing a pass. Run broader tests only when shared behavior or unresolved concerns justify them; honor required project checks.
+4. Where shared state, test isolation or order dependencies matter, run affected tests alone or in reversed/randomized order. There is no universal requirement to reverse every test suite after every change.
+5. Examine scope creep, bypassed failures, weakened assertions, expectations copied from outputs, secret residue and destructive defaults. Test counts alone do not establish coverage. Document/research cards need accurate claims and working references, not arbitrary section-count quotas.
+6. For money/auth/isolation/data safety or comparable impact, inspect trust/transaction boundaries and relevant failure, retry, authorization, concurrency and idempotency paths. Use targeted mutation testing when it materially checks the oracle; isolate and restore mutations, and prove restoration. Not every feature has all of these behaviors.
+7. Classify findings with location, trigger, actual/expected behavior and evidence. Mark untested concerns as unverified, not reproduced. Out-of-scope findings become separate cards or explicit decisions.
 
-## Three verdicts
+## Bind evidence to the result
 
-- **Pass**: run the merge pipeline.
-- **Fix, then merge**: write review findings, send them back to the original worker, append commits on the same branch.
-- **Redo**: wrong direction. Explain why; amend the card if needed, then re-dispatch.
+For structured tasks, record acceptance through the runtime evidence protocol. An immutable receipt identifies the task/spec revision, requirements digest, relevant content fingerprint, verification attempt or explicitly declared manual source, conclusion and reviewer declaration when required. Include the actual evidence artifact and its digest. Do not replace an old receipt with a later verdict.
 
-## Merge pipeline (do it in one go)
+A passing verification attempt is usable only for the requirements and content it actually tested. The runtime records relevant content before/after verification; later code or relevant uncommitted changes make that result inapplicable. A pure mtime change does not change content. Inspect the scope: a fingerprint does not prove that omitted files, ignored outputs or untested behavior were covered. Missing/tampered artifacts and legacy note-only acceptance remain visibly unresolved. Configuration changes unrelated to a task's requirements do not automatically invalidate every task.
 
-```bash
-git -C <repo> merge --no-ff t/NNN-<slug> -m "merge T-NNN: <one line + key acceptance numbers>"
-<run the full suite on main>                    # red? fix or roll back immediately; main is always green
-git -C <repo> push                             # then run git status -sb and confirm it does not show "ahead"
-```
+Manual review can be appropriate for a low-impact card. Record it as manual evidence against the actual content, not as an executed test. When independent review is required, identify the participant and implementation relationship and link the review to that same result. Cooperating identity declarations are not cryptographic identity or proof that model judgments are independent.
 
-Then sync docs in a separate commit titled `docs(plan): merge T-NNN`:
-- `status.md`: mark merged, record the merge commit and one line of review notes with key numbers, so later readers know what was verified;
-- `tasks.md`: mark the card done;
-- handoff doc: current state, completed items, test count;
-- root README tree, ADRs, decision ledger: apply every item from the change note's "documentation impact".
+## Verdict and independence
 
-Finally run `scripts/wt.sh rm <card>`. It refuses if the branch is unmerged or the worktree is dirty.
+- **Pass**: record why acceptance covers the scoped change and what remains unverified. Mark the task `verified` only with that evidence.
+- **Fix, then review**: write a bounded review note from the template and continue the existing work after checking its current state.
+- **Change approach**: explain the failed assumption, preserve current results and revise scope/worker/settings only within policy and user authority.
 
-- **Conflicts and multiple migration heads**: the orchestrator resolves them (re-point `down_revision`); never push that back to the worker.
-- **Branch started from another unmerged branch**: update it to the upstream's final version, re-run acceptance, then merge.
+The orchestrator may implement a card. Use independent review for substantial self-authored work, higher-impact changes or unresolved uncertainty according to project policy. Give the reviewer specification and code, not your conclusions. It consumes an agent slot and needs an approved dispatch route. Reproduce/assess its findings rather than accepting them by status alone. If independent review is required but unavailable, report that gate as unmet.
 
-## Rework
+## Integrate under project policy
 
-1. Write `docs/plan/reviews/<card>-rN.md` from `templates/review.md`, containing:
-   - **Verdict**: one line on what was right and where the problems concentrate;
-   - **Must fix**: location, reproduction (input, actual vs expected), and the fix;
-   - **Should fix**: table form; anything deferred names the card that takes it;
-   - **Not doing / reporting requirements**: commit message for the follow-up, outputs to attach, no weakening of existing assertions.
-2. Send it back to the **original worker** on the same branch (rework prompt in `references/dispatch.md`); mark "rework" on the board.
-3. Two failures on the same problem: different worker, different model, or the orchestrator takes over.
+Confirm current owner/epoch and the exact accepted baseline before shared mutation. Use `guard --action merge` with the configured integration branch and merge method. A `merge`, squash, rebase or fast-forward policy is a project choice; no global `--no-ff` mandate applies. Do not replace it with the reviewer's preference. For a non-Git project, record the serial file integration and local snapshot instead of a Git operation.
 
-## Independent review
+Begin a structured integration record for the selected participants/evidence and actual target baseline before the authorized integration work. After actual integration, run the required affected checks against the assembled result and finish its record with the corresponding verification. Long verification runs outside the shared mutation lock; final registration rechecks the target and evidence under the lock. The resulting commit or non-Git content must match what was tested. A target that advanced after verification cannot reuse that old pass.
 
-**When**: cards the orchestrator wrote, unusually risky merges, and cards you reviewed but still cannot judge confidently.
+Record already-merged code separately from overall acceptance. When A and B passed individually but their combination fails, retain the actual integration and failed evidence, then fix within scope; do not automatically reset work or mark the combination passing. Batch integration can validate the final assembly instead of mechanically rerunning every full suite after each merge. Membership/provenance declarations remain explicit: hashes and passing tests do not prove that arbitrary merge commands included every semantic change. Preserve unsupported squash/rebase proof gaps. Mark tasks integrated only with applicable integration evidence.
 
-**How**:
-1. Start another agent — a subagent or another worker. Give it **only the spec (card + relevant ADRs) and the code or branch**. Do not give it your conclusions or your guesses.
-2. Require it to reproduce every must-fix finding, propose should-fix items, and give a verdict.
-3. Decide item by item whether to accept or reject, and record the reason in the change note or review.
+Update the board, task index, handoff and relevant decisions from real evidence while still owner. Commit those updates only when authorized. Push only when both permission and cadence permit it; local success and a documented unpushed commit are valid outcomes. Push does not authorize publication/deployment.
 
-In the source project, independent review caught real problems twice: an idempotency comparison that ignored business fields, and a CSRF path that returned 500 on non-ASCII input, and a form parser that consumed the request body.
+Cleanup is separate from acceptance. Respect retention and checks for dirty, untracked, ignored, unmerged, running, unknown and evidence-bearing work. Use the managed cleanup path only when safe. If a squash result cannot be proved integrated, retain its worktree for reconciliation. Legacy force flags cannot waive these checks.
+
+## Rework note
+
+Use `templates/review.md` for the verdict, reviewed baseline/config revision, actual commands/results, must-fix reproductions, unverified concerns, accepted scope and skipped checks. A review note may narrow a card; it cannot grant new permissions or override project policy. Follow configured retry limits; changing task IDs does not make repeated failures disappear.

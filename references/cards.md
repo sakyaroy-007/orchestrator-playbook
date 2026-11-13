@@ -1,84 +1,58 @@
-# Writing task cards
+# Writing bounded task cards
 
-Templates:
-- implementation card: `templates/task-card.md`
-- spike card: `templates/spike-card.md`
+Use `templates/task-card.md` or `templates/spike-card.md`. Projects may keep template snapshots; configured paths and [configuration](configuration.md) take precedence. A card narrows scope and permissions; it cannot appoint an owner, authorize a new worker, grant Git rights, override a red line or change project policy.
 
-The project also keeps a snapshot under `docs/plan/templates/`.
+## Split along contracts
 
-## How to split
+One card produces a contract that another consumes: function signature, schema, endpoint or file format. Before an upstream result is integrated, downstream work uses an explicitly agreed contract/mock or records the dependency and exact starting branch. Do not treat an unmerged promise as implemented behavior.
 
-- **Split along contract boundaries.** One card produces one contract (function signature, table, endpoint, file format); the next card consumes it. Until the upstream card merges, downstream cards may only write mocks or contract tests — never assume the upstream implementation exists.
-- **Size**: S ≤ half a day, M ≈ one day, L ≈ two days. Anything larger must be split. An L card states a "pre-planned split point" so it can be cut when it overruns. The weaker the worker's model, the smaller the card.
-- **Separate risk.** Money, auth, and isolation changes do not share a card with pages or refactors.
-- **Number by epic**: E1 → T-1xx, E2 → T-2xx, and so on. Spike cards use S-NN. Insertions keep the segment, so numbers never collide.
-- **Out-of-scope findings become new cards.** Number them in the same segment and state in the new card's background which card found the issue.
+Keep cards small enough to review independently. Suggested sizes are S (half day), M (about a day) and L (about two days); split larger work and state a fallback split point. Separate money/auth/isolation work from unrelated UI or refactors. Number by epic where useful, with S-NN for spikes. Out-of-scope findings become new cards linked to their source.
 
-## Rolling expansion
+Keep one-line backlog entries and expand only the next ready wave. Re-check existing cards against current paths, contracts and baseline before dispatch; old line numbers are not evidence of current behavior. A foundations wave is needed only for actual blockers.
 
-- Every card gets one line in `tasks.md`; only the **current wave** is expanded into full cards. Later cards depend on contracts that do not exist yet; writing them in detail now only creates stale text.
-- Before dispatching an old card, **re-check it against the current code**: line numbers, file names, and contracts may have moved. Optionally put a banner at the top: "⚠️ re-verify after the prerequisite card merges, then mark ready."
+## Card content
 
-## Anatomy of a good card
-
-| Section | Content |
+| Field | Required information |
 |---|---|
-| Dispatch prompt (top) | One fixed sentence with absolute paths: read WORKER.md and this card, work in worktree X (branch Y), report with the template. Extra restrictions known at dispatch time go here too ("offline-verifiable only") |
-| Metadata table | Epic / wave, worker (and model requirement), dependencies (card, merged?, starting branch), size, flags, hot-file lock |
-| Background | Why now, with **measured evidence**: commands and output, `file:line`. Not conclusions alone |
-| Goal | What will be true when done, one or two sentences |
-| Required reading | Specific file paths; ADR sections |
-| Contract | Names other cards depend on; the worker must match them exactly |
-| Scope | Numbered list, fine-grained enough to execute directly |
-| Not doing | Adjacent work that is tempting to do; plus "if you cannot finish without changing X, stop and report `blocked`" |
-| Acceptance | Runnable commands with expected output (specific numbers), executed in the worktree |
-| Extra reporting | e.g. old→new test-name mapping, preconditions added |
+| Dispatch prompt | Read worker rules and this one card, use explicit working directory/branch, report using the template; append only narrower restrictions |
+| Policy | Config path/revision, decision evidence and approved worker ID; unresolved settings/permissions block the affected action |
+| Baseline | HEAD/branch or non-Git snapshot, dirty/untracked facts, relevant pre-existing failures |
+| Goal and background | Checkable result and measured reason for this work, with command/output or file evidence |
+| Reading and contract | Specific files, ADR sections and externally consumed names/behavior |
+| Scope | Allowed files/operations, explicit exclusions and shared-resource reservation |
+| Dependencies | Required integration commits/contracts, or a documented upstream starting branch |
+| Acceptance | Actual runnable commands, cwd, expected external behavior, failures that must be caught and relevant coverage limits |
+| Report | Actual commands/exit/output, covered scope, gaps, preserved work and out-of-scope findings |
 
-## Acceptance commands that resist cheating
+Use project-resolved absolute paths in a live dispatch prompt so workers do not guess cwd. Keep public templates portable placeholders. A card that cannot be completed inside scope returns `blocked` with evidence and a recommendation; it does not grant itself an exception.
 
-- **Be specific**: "expected: 52 passed", not "tests pass".
-- **Tests may not shrink or weaken**: test count no lower than before; assertion count no lower, e.g. `grep -c -E '^\s*assert ' tests/*.py`.
-- **Tests must be truly isolated**: each one alone and in reverse order must be green. Any card that edits tests must include this.
-- **Structural invariants**: exactly one migration head; `git status --short` empty; `grep` for forbidden patterns returns 0 (e.g. `float` in money code).
-- **Doc / research cards**: file exists; section count and source-link count above a floor.
-- **🔴 cards**: name the three test cases — idempotency (duplicate request takes effect once), concurrency (multi-threaded result exact), authorization (another user's resource returns 401 / 403 / 404).
+## Register the executable task contract
 
-## What the flags mean
+Complete and register a structured spec before dispatching a new card. It records requirements/acceptance, relevant relative content scopes, upstream task/evidence references with contract-only versus integrated requirements, exclusive resource names, and required review declarations. The runtime stores the requirements revision/digest and retains prior records. Keep this machine-readable contract aligned with the human card; a draft or an unregistered markdown promise does not satisfy readiness.
 
-- 🔴 **High risk** (money / auth / isolation / data safety):
-  - the three test classes above are mandatory;
-  - the orchestrator reviews line by line and runs mutation tests;
-  - when needed, the orchestrator writes it and an independent reviewer checks it.
-- 🔒 **Shared resource** (real hardware, production or daemon services, global config):
-  - globally serialized; take the lock first;
-  - the card lists, **item by item**, the allowed operations and the restore checklist: back up before, restore after, then delete the backup;
-  - steps needing a password or interactive confirmation are explicitly left to the orchestrator or the human.
-- 🏛 **External item**: the human handles it; record it in `external.md`.
+Use the read-only readiness operation for the actual intended worktree. It explains missing dependencies or occupied resources; run checks again under the same reservation lock before launching. A required upstream integration must be present at the consumer's actual starting point, not merely mentioned in a note. Explicitly agreed contract-only work pins the upstream spec revision/hash; it requires neither an integrated implementation nor a claim that the code was accepted. Reconcile a changed upstream result before downstream acceptance/integration. Contract-only bindings track the spec. Integrated dependencies bind an intact historical result and check the consumer's actual baseline. An upstream target advancing normally does not erase that history; publishing the changed target still needs current assembled verification bound to its HEAD/branch and scope.
 
-## Hot files and migrations
+Exclusive names use one project-wide namespace across worktrees, such as `port:3000`, `database:integration` or `file:package-lock.json`. Declare shared hot-file ownership explicitly; matching literal scopes are not a substitute for semantic resource planning. Active/unknown claims stay occupied until their execution has actually ended or been explicitly reconciled. Readiness is not authority to dispatch, and a resource declaration is not permission to access it. The owner still chooses ready cards; no automatic scheduler/rebase/retry is implied.
 
-- **Hot files**: route registration, shared schemas, model exports, dependency manifests, main loops, migration directories. One card at a time. Record the owner in `status.md` and in the card's metadata.
-- **Database migrations**: at most one new revision per card. If parallel branches collide, the orchestrator re-points the new revision's `down_revision` at the current head during merge, so the main branch always has exactly one head.
-- **Local services**: use port "base + last two digits of the card number"; use a temporary database or directory; never touch a daemon service.
+## Acceptance that checks behavior
 
-## Spike cards (S-NN)
+- Define observable success and meaningful failure paths. Test a violated contract, not only the implementation's own output or an arbitrary count of assertions.
+- Preserve the intent of existing tests. Explain any changed/deleted expectation; do not hide failures with skips, relaxed comparisons or copied actual outputs.
+- For state-sharing, isolation or order-sensitive changes, include focused independent/reversed/randomized runs where relevant. Do not require all tests in all orders for every card.
+- Choose money/auth/data-safety checks relevant to the behavior: authorization, retries/idempotency, partial failure, concurrency, persistence. Review depth and targeted mutation follow impact and project policy.
+- Documentation/research acceptance checks claim accuracy, source dates, references and usable instructions. Unsupported claims stay unverified; a heading count is not a proof.
+- Distinguish expected output in the card from observed output in the report. Record baseline and dirty state so later results can be reproduced.
 
-For technical uncertainty whose answer would change the architecture.
+## Isolation and preservation
 
-- **Write it as a list of questions to answer.** Every answer needs measured evidence (command + output); citing docs is not enough. Measurements routinely overturn docs.
-- **Time-boxed**: size S; when time runs out, deliver what is already established.
-- **One document only**, containing:
-  1. verdict summary: one line per question, marked feasible / infeasible / feasible with conditions;
-  2. evidence per question: at most 15 lines each;
-  3. recommendation for the ADR;
-  4. restore checklist.
-- **After merging**: fold verdicts into the ADR; turn discovered problems into new cards.
+For Git parallel work, one card normally gets one worktree/branch created through the managed path. Non-Git stays serial with an explicit directory and local snapshots. The orchestrator may implement a card and arranges independent review when impact/policy requires it.
 
-## Branch starting point
+Hot files have one active writer; reserve them in the board and card. Worktrees do not isolate ports, services, databases or credentials. Record the concrete shared resource and coordination mechanism; do not infer a free lock from its age. Migration numbering and head topology follow the project's migration contract, not a universal one-revision rule.
 
-By default, cut from the integration branch at dispatch time.
+A shared-resource card lists each already-authorized operation, backup/recovery evidence and restoration check. The card alone cannot expand policy. Retain backups until restoration is verified and retention permits cleanup. Interactive or privileged steps remain with an appropriately authorized operator; no automatic permission changes.
 
-When a card must build on an unmerged branch (e.g. it needs a function the upstream card just wrote):
-1. create the worktree with `wt.sh new <card> <slug> --from <upstream branch>`;
-2. note the starting point in the card and on the board;
-3. before merging, update it to the upstream's final version and re-run acceptance.
+## Spikes and upstream branches
+
+Spikes answer questions that affect architecture, within a timebox and explicit operations. Deliver findings with measured evidence, cited source evidence clearly distinguished, limitations, recommendation and restoration facts. Unrun experiments remain unverified. Keep product changes out unless separately scoped. Fold accepted findings into decisions and create follow-up cards.
+
+For a card based on an unmerged branch, record the exact starting point and dependency. Before integration, reconcile with the upstream's final result and rerun the affected acceptance. Never silently reset or discard the downstream work.

@@ -1,0 +1,74 @@
+name: Offline regressions and package validation
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  offline:
+    name: Offline checks (${{ matrix.os }}, Python ${{ matrix.python }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        # Intel macOS keeps the minimum supported Python 3.9 available.
+        os: [ubuntu-24.04, macos-15-intel]
+        python: ['3.9', '3.13']
+    defaults:
+      run:
+        shell: bash
+    env:
+      GIT_CONFIG_NOSYSTEM: '1'
+      GIT_CONFIG_GLOBAL: /dev/null
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Check shell syntax
+        run: |
+          for script in scripts/*.sh skills/*/scripts/*.sh; do
+            bash -n "$script"
+          done
+      - name: Run shell selftest with fake workers
+        run: bash scripts/selftest.sh
+      - name: Run offline runtime and packaging regressions
+        run: python3 -I -m unittest discover -s tests
+      - name: Check generated bundles without rewriting them
+        run: python3 -I scripts/build-skills.py --check
+      - name: Validate local manifests and selected skill resources
+        run: python3 -I scripts/check-manifests.py
+
+  native-claude-validator:
+    name: Native Claude plugin validation (CLI 2.1.323, no authentication)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    defaults:
+      run:
+        shell: bash
+    env:
+      CLAUDE_CONFIG_DIR: ${{ runner.temp }}/playbook-validator-config
+      CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install the pinned validator into runner temporary storage
+        run: >-
+          npm install --prefix "$RUNNER_TEMP/playbook-validator"
+          --no-save --package-lock=false --no-audit --no-fund
+          @anthropic-ai/claude-code@2.1.323
+      - name: Validate with the native CLI without a model request
+        run: |
+          unset ANTHROPIC_API_KEY ANTHROPIC_AUTH_TOKEN CLAUDE_CODE_OAUTH_TOKEN
+          "$RUNNER_TEMP/playbook-validator/node_modules/.bin/claude" plugin validate .

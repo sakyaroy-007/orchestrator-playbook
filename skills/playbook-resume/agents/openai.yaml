@@ -1,0 +1,6 @@
+interface:
+  display_name: "Playbook Resume"
+  short_description: "Resume the current session's recorded work"
+  default_prompt: "Use $playbook-resume for my explicitly requested project lifecycle action."
+policy:
+  allow_implicit_invocation: false

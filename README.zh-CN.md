@@ -1,161 +1,155 @@
 # Orchestrator Playbook（总指挥打法）
 
-<img src="assets/icon.png" width="96" align="right" alt="Orchestrator Playbook">
+<img src="assets/icon.png" width="96" align="right" alt="Orchestrator Playbook icon">
 
 [English](README.md) | **简体中文**
 
-[![GitHub stars](https://img.shields.io/github/stars/sakyaroy-007/orchestrator-playbook?style=social)](https://github.com/sakyaroy-007/orchestrator-playbook/stargazers)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-**一个让「总指挥 agent + 多个执行者 agent」协作开发软件项目的 skill。**
+**一包五个显式技能入口，用于启动、继续和交接软件项目。**
 
-总指挥负责计划、把工作拆成自包含的任务卡、派发给在并行 git worktree 里干活的执行者，并亲自审查每一个分支——它是唯一做合并的人。所有状态都落在仓库文件里，所以总指挥可以在会话、模型、甚至不同 agent 工具之间交接，而不丢上下文。
+v3 在任务卡与 worktree 流程上增加项目配置、会话归属、检查点和受管执行。总指挥计划、审查，执行者提交证据；验收与集成仍是独立决定。本源码仓库是技能包，不要为它初始化一套项目控制面。
 
-这套方法提炼自一个真实项目，跑通之后做了通用化。
+| 入口 | 用途 |
+|---|---|
+| `playbook` | 选择操作；查看状态、诊断、配置或暂停项目 |
+| `playbook-start` | 回答初始问题，启动新项目或接入已有项目 |
+| `playbook-resume` | 由当前持有者会话继续已记录的工作 |
+| `playbook-handoff` | 创建恢复检查点并准备正常交接 |
+| `playbook-takeover` | 显式接收已准备的交接，或执行得到授权的中断恢复 |
 
-## 目录
+五个入口都设置 `disable-model-invocation: true` 与 `allow_implicit_invocation: false`。每个生成目录都包含完整的运行时、参考资料和模板，单独安装一个也不依赖兄弟目录。技能选择方式、命令前缀和插件命名空间取决于客户端；上述名称**不代表各客户端的 slash 语法完全一致**。
 
-- [怎么运作](#怎么运作)
-- [安装](#安装)
-- [快速开始](#快速开始)
-- [启动门](#启动门)
-- [换总指挥](#换总指挥)
-- [模型选择](#模型选择)
-- [仓库内容](#仓库内容)
-- [依赖](#依赖)
-- [安全边界](#安全边界)
-- [贡献](#贡献)
-- [许可证](#许可证)
+## 首次使用
 
-## 怎么运作
+1. 从下面的安装策略中选**一种**，然后在客户端里打开目标项目目录。
+2. 显式选择 **playbook-start** 即可，无须准备提示词。目标尚不明确时，agent 每轮问少量关键问题，推荐首个里程碑，在范围和验收明确后停止追问。已有目标也可以直接说，例如：“实现 CSV 导入，并覆盖格式错误行的测试。”**从未接入 v3 的旧项目**同样只需说：“用 playbook-start 接入当前项目。”它先读取并保留已有计划和工作；原先采用旧版 Playbook 打法的项目也走这条接入路径。
+3. 核对一份具体推荐：实际项目路径、首个目标、复用文件、员工设置、并发／超时、权限和 minimal／standard 基座规模。接受其中的明确选择后，技能只询问缺失决定，不重复问卷。员工默认继承各自客户端的配置。
+4. 没有持有者冲突时，start 记录策略和新的会话身份。基座助手先预览，再只创建缺失文件，包括根 README、配置指定的计划／员工／交接文件、首卡草稿和必要运行时副本。已有文档与不同版本的脚本保留；支持 Git、非 Git 和自定义规划路径。standard 另加可选规划资料。
+5. agent 根据真实项目情况补全首卡，登记要求、内容路径、依赖与独占资源，检查 readiness 后才派发。生成草稿或尚不明确的测试命令不代表任务已就绪。
 
-```mermaid
-flowchart LR
-    H[拍板人] -->|任命| O[总指挥 agent]
-    O -->|任务卡 + worktree| W1[执行者 A]
-    O -->|任务卡 + worktree| W2[执行者 B]
-    O -->|任务卡 + worktree| W3[执行者 C]
-    W1 -->|分支 + 变更说明| O
-    W2 -->|分支 + 变更说明| O
-    W3 -->|分支 + 变更说明| O
-    O -->|审查 + 合并| M[(main)]
-```
+单独调用 **playbook** 会显示实际项目、本会话角色、阻塞、一个推荐和至多三个备选，保持只读。说“检查项目基座”可预览缺失文件；说“补齐缺失基座”才执行获准的只创建操作。选择框取决于宿主能力，不支持时用编号文本，并不承诺统一 GUI。详见[开局参考](references/bootstrap.zh.md)。
 
-1. **控制面放在仓库里**。计划、任务卡、看板、决策台账、审查意见、交接文档都在 `docs/plan/` 和 `.orchestrator/` 下，只有总指挥写。
-2. **一卡一 worktree 一分支**。执行者只在 `<repo>-wt/<卡号>` 里写，只提交到 `t/<编号>-<slug>`，另写一份 `docs/changes/` 变更说明。
-3. **总指挥不接受自报**。每张卡回来都要复跑验收命令、读完整 diff，查越界、假测试、密钥残留、不可逆操作。
-4. **只有总指挥合并**。`--no-ff` 合入 main，在 main 上跑全量测试，推送，更新文档，清掉 worktree。
-5. **角色可以换人**。`.orchestrator/TEAM.md` 记录当前 holder；只有拍板人能改。旧总指挥写交接，新总指挥核实现场后认领。
+完成 v3 初始化不需要手动填一整套模板占位符。技能把已定选择转成具体配置与规划内容，已有文档仍作为起点。命令发现不证明已登录、已授权或支持所请求的参数。
+
+已有 `.orchestrator` 目录需要用户明确选择接入。已有持有者时应通过 resume 或 takeover 处理冲突，即使两个会话使用同一客户端或模型。会话 ID 标识具体会话，不是产品名称；开启新对话不会悄悄继承旧对话的角色。
 
 ## 安装
 
-### Claude Code
+选择插件安装、共享技能根目录或单客户端技能根目录。避免几种方式重复安装同一批入口，否则客户端可能发现重复项。下面是用户自行操作的安装步骤；构建和测试本仓库不会安装到全局目录，也不会连接模型服务。
 
-```bash
+### Claude Code 插件
+
+适用于已经发布、包含 v3 的版本：
+
+```text
 /plugin marketplace add sakyaroy-007/orchestrator-playbook
-/plugin install orchestrator-playbook --marketplace sakyaroy-007/orchestrator-playbook
+/plugin install orchestrator-playbook@orchestrator-playbook
 ```
 
-### Codex
+插件清单指向 `skills/` 下五个目录。本地清单检查使用 `claude plugin validate .`；清单验证不等于实际技能发现或执行者运行测试。已发布版本见 [Releases](https://github.com/sakyaroy-007/orchestrator-playbook/releases)。
 
-仓库带 `.codex-plugin/plugin.json` 清单。如果你的 Codex 支持从 git URL 安装插件，直接指向本仓库；否则用下面的软链方式。
+### Codex 与其他客户端
 
-### skills.sh / skills CLI
+仓库包含 `.codex-plugin/plugin.json` 与 `.agents/plugins/marketplace.json`。客户端支持插件时，使用该版本提供的安装流程。已通过本机 Codex `skills/list` 协议和 DSH 原生文件系统 provider 验证独立目录发现，未调用模型；尚未实测这两端的插件安装流程或活动对话加载，安装界面与调用语法可能不同。通用市场目录指向整个包，再由包的插件清单选择 `skills/`。
+
+支持独立技能目录的客户端，可安装五个生成目录。如果目标客户端确实扫描 `~/.agents/skills`，可以使用这个共享根目录；仅供 Claude 使用时选 `~/.claude/skills`。其他单客户端根目录需要查阅对应客户端文档。模型凭据与私有客户端配置不放进本包。
+
+在已审阅、包含生成产物的检出目录中，下面示例安装到共享根目录，并拒绝任何已存在的目标，包括悬空符号链接：
 
 ```bash
-npx skills add sakyaroy-007/orchestrator-playbook
+python3 -I scripts/build-skills.py --check || exit 1
+skill_root="${HOME}/.agents/skills"
+for name in playbook playbook-start playbook-resume playbook-handoff playbook-takeover; do
+  if [ -e "$skill_root/$name" ] || [ -L "$skill_root/$name" ]; then
+    printf 'Already exists; review before replacing: %s\n' "$skill_root/$name" >&2
+    exit 1
+  fi
+done
+mkdir -p "$skill_root"
+for name in playbook playbook-start playbook-resume playbook-handoff playbook-takeover; do
+  cp -R "skills/$name" "$skill_root/$name" || exit 1
+done
 ```
 
-skills.sh 没有人工提交入口：有人通过 CLI 安装后，安装遥测会自动把它带进排行榜。
+技能安装器列出多个入口时，选择这五个。根目录 `SKILL.md` 是保留的 `orchestrator-playbook` 兼容入口；把整个仓库当作一个旧式技能安装，不等于装好了五个新入口。升级需明确操作：审阅新版本和本地改动，再替换选定的安装。本包没有自动升级器。
 
-### 其他客户端
+## 继续与交接
 
-把本目录复制或软链到对应 agent 的 skills 目录：
+- **继续：** 在持有者会话显式选择 `playbook-resume`，读取记录中的任务与现场差异。恢复对话不会自动重复派发或测试。
+- **暂停：** 通过 `playbook` 暂停，先持久化停止新增工作，再创建检查点；即使快照失败也保持暂停，并单列恢复不完整的事实。保留员工与成果。
+- **交接：** 旧会话调用 `playbook-handoff`，保存当前工作与任务记录，准备交接，并停止旧持有者的受管修改。返回带实际项目路径的可复制接任短句；新 agent 自行读取交接 ID。检查点不会提交或推送源文件。
+- **撤回／取消：** 让 `playbook` 撤回尚未接收的交接，旧 ID 失效并回到 paused；也可取消指定 attempt。取消请求由 live supervisor 执行，实际结束确认前保留资源占用；孤儿执行仍标 unknown。
+- **接手：** 指定的新会话显式调用 `playbook-takeover`。有效的已准备交接加上这次调用足以授权认领，不再重复问同一个确认。只有状态、机器、基线与恢复内容检查通过，才变更归属。
+- **持有者意外中断：** 先查看状态和诊断。恢复需要用户要求停止或替换旧会话，并使用明确的恢复参数。等待时间不是授权证据；运行中或状态未知的尝试必须先核实，再决定是否重试。
 
-```bash
-git clone https://github.com/sakyaroy-007/orchestrator-playbook.git
-ln -s "$PWD/orchestrator-playbook" ~/.claude/skills/orchestrator-playbook   # Claude Code
-ln -s "$PWD/orchestrator-playbook" ~/.agents/skills/orchestrator-playbook   # Codex / 共享根目录
-```
+项目策略保存在 `.orchestrator/config.json`。本地归属、执行尝试与恢复副本保存在**共享 Git common directory**，所有关联 worktree 共用一个持有者和锁。非 Git 项目使用 `.orchestrator/local/`、串行工作和本地恢复快照，不获得 worktree、提交、合并或推送能力。本地恢复数据不属于正常 Git 发布内容，可能包含未提交工作的副本。
 
-本 skill 是**显式调用**的（`SKILL.md` 里 `disable-model-invocation: true`，`agents/openai.yaml` 里 `allow_implicit_invocation: false`），不会自己触发。
+检查点不收录 Git 忽略的未跟踪文件，交接前需明确归档其中必要的证据。当前上限为单文件 64 MiB、总计 256 MiB、10,000 个文件。未合并索引、dirty submodule、特殊文件，以及超量、不可读或变化中的内容都会阻止完整检查点；已取得的部分恢复数据会保留，不会把它报成交接成功。
 
-## 快速开始
+## 配置与授权
 
-```bash
-# 1. 在仓库里铺控制面（可先加 --dry-run 预览）
-bash scripts/init-plan.sh /path/to/repo --project MyProject --decider "你的名字" --orchestrator "你的 agent"
+配置覆盖执行者、继承／固定／建议的模型与 effort、agent 和重任务并发、超时、尝试次数、Git 偏好、审查级别与计划路径。CLI 和状态流转详见[配置说明](references/configuration.zh.md)与[生命周期说明](references/lifecycle.zh.md)。
 
-# 2. 填掉占位符
-grep -rn '【待填' /path/to/repo/docs/plan /path/to/repo/.orchestrator
+权限值是 `allow`、`ask` 或 `deny`，缺少授权不等于允许。用户明确回答可以一次性授权常规本地工作，不必每张卡重复确认。`ask` 和 `deny` 不执行被守卫的动作。允许推送不等于允许部署或发布；允许清理也仍须检查脏工作、未合并修改、运行中的执行者和需保留的证据。
 
-# 3. 建第一张卡的 worktree（会打印预检口令和派发口令）
-cd /path/to/repo && scripts/wt.sh new T-001 first-card
+`inherit` 使用每个执行者自己的默认配置；`fixed` 必须有已验证的客户端能力映射；`recommend` 在选择落实前只是提议。适配器支持明确选择模型，并在检查 CLI help 后传入 Claude effort、Codex reasoning effort 或 DSH reasoning-effort 临时覆盖。profile 覆盖支持 Codex 和 DSH；DSH 必须明确选择一个非交互 profile，模型与思考仍可继承该 profile 的设置。Hermes effort/profile 和 Claude profile 覆盖暂不支持，会在启动前阻止。参数映射与传参测试不证明已登录、模型可用或实际思考行为。项目配置里不存凭据。
 
-# 4. 派发（Claude Code / Codex / Hermes / DeepSeek Harness，或你自己的调度器）
-scripts/dispatch.sh claude /path/to/repo-wt/T-001 "读 docs/plan/WORKER.md 和 docs/plan/tasks/T-001.md，在这个 worktree 里干活，完成后按 WORKER.md 模板回报。"
-```
+局部变更使用 `configure --patch FILE`，例如 `{"limits":{"agents":3}}`，保留未给出的设置；`--config FILE` 仍用于有意完整替换。schema 1 旧项目仍可读取，明确启用 `runtime_api:2` 后使用扩展协议，不静默改变旧策略摘要。旧运行时会拒绝该标记，避免忽略新约束。
 
-## 启动门
+## 任务、证据与集成
 
-**读到这个 skill，不等于你是总指挥。** 动手之前，必须满足以下任意一条：
+派发前登记 task spec 并检查 readiness。依赖区分固定的上游契约与已出现在消费者实际基线中的集成结果；显式独占资源在整个项目跨工作树共用。总指挥选择就绪任务，不代表自动调度或重试。
 
-1. 拍板人在本次会话里任命了你；
-2. `.orchestrator/TEAM.md` 记录的当前 holder 就是你；
-3. 你正在明确地从上一任总指挥手中接任。
+员工负责实现与获准的轻量检查；dispatch 结束后，总指挥通过受管验证排程重型测试和独立审查。不可覆盖回执把要求、依赖、相关字节／模式及材料绑定到实际验证 attempt，后续变化会使旧证据不再适用。派发成功仍只标 reported。人工证据须由审查策略明确允许，并保持人工标记。
 
-否则你只是执行者（或普通助手）：不许写控制面、不许派活、不许合并。这道门在三个地方同时生效：description、客户端清单、`SKILL.md` 第 0 节。
+集成记录把已验收参与任务与实际目标、明确关联的组合验证绑定。合并成功不代表整体通过。可选的集成分支推送门槛检查当前已验收结果，同时保留原权限与节奏要求。声明参与关系和源提交祖先关系不能证明语义完整纳入，这一限制保持可见。完整命令见[任务／证据／集成参考](references/work-protocol.zh.md)。
 
-## 换总指挥
+## 运行时诊断
 
-总指挥一定会换：额度耗尽、换模型、换工具、换人。流程在 `SKILL.md`（「换总指挥」）和 `references/handoff-files.md`：
+无需初始化项目即可运行 `python3 -I "$PLAYBOOK_SKILL_DIR/scripts/playbook.py" version`，查看实际执行路径、包／runtime API／schema 版本、能力与必要文件摘要。已初始化项目使用 `doctor --project "$PLAYBOOK_PROJECT"` 比较当前包、项目副本与 `.orchestrator/runtime-manifest.json`。缺失、不同或来源未知都明确呈现，诊断不覆盖或升级文件。3.0.0 正式版返回 `release_status:released`；应同时比较摘要与版本字符串，以识别较早的开发副本和本地修改。
 
-1. **拍板人**指定新 holder（agent 不能自我任命）；
-2. 旧总指挥把交接写进 `HANDOFF.md`，把私有记忆搬进仓库，更新 `.orchestrator/TEAM.md`，提交并推送；
-3. 新总指挥按顺序读、核实现场、在 `TEAM.md` 认领，然后给拍板人一段话的接手报告。
+## 合作边界
 
-## 模型选择
+首版协调的是**同一台 POSIX 机器上遵守协议的会话**。受管操作在 OS 锁下检查会话身份和 epoch；短时受守卫修改在子命令执行期间持有同一把锁。受管派发先登记执行尝试与资源槽，再启动进程。进程成功只代表已返回结果，不自动成为已验收或已集成。
 
-本 skill 不依赖任何模型供应商、网关或路由服务。模型由用户自选；playbook 只建议：高风险卡（钱 / 鉴权 / 隔离）用更强的模型，并做更重的审查。
+协议无法拦截客户端任意 shell/edit 工具、原始 Git 命令、无关进程或不遵守流程的客户端。`PLAYBOOK_GUARDED` 仅避免适配器递归，不是安全隔离边界。受版本控制的 `TEAM.md`、进程退出码或过旧时间戳，都不能证明归属或安全接管。
 
-## 仓库内容
+本版未提供多机自动接管、客户端原生对话恢复、自动升级、硬费用限制、自动发布，也未验证所有客户端的模型／effort 参数映射。并发和超时是执行控制，不是硬花费上限。运行时测试使用临时项目和假执行者命令；原生客户端加载和付费任务执行需要另行验证。
+
+## 旧版兼容
+
+根目录 `SKILL.md` / `SKILL.zh.md`、`agents/openai.yaml` 以及原有 `scripts/init-plan.sh`、`scripts/wt.sh`、`scripts/dispatch.sh` 路径保留。未配置的项目仍可使用 v2 手工铺模板、填占位符的流程。这种 legacy 用法**不会**产生 v3 归属、策略、执行尝试记录或受管操作保证。先通过 `playbook-start` 接入，再将项目视为 v3 managed。
+
+## 开发与打包
+
+运行时需要 Python **3.9+** 标准库和支持文件锁的 POSIX 平台；Git 项目需要 Git。shell 适配器还使用 Bash（兼容 macOS Bash 3.2）、Git、Perl 或 `timeout` 及标准 Unix 工具。只有实际派发才需要对应客户端，测试不调用真实客户端。
 
 | 路径 | 用途 |
 |---|---|
-| `SKILL.md` | skill 本体（英文） |
-| `SKILL.zh.md` | skill 中文版 |
-| `AGENTS.md` | 给**维护本仓库**的 agent 的规则（不是给使用者的） |
-| `CHANGELOG.md` | 发布历史 |
-| `references/bootstrap.md` | 新项目开局、接手总指挥、会话检查清单 |
-| `references/handoff-files.md` | `.orchestrator/TEAM.md` / `PLAYBOOK.md`：怎么做干净交接 |
-| `references/cards.md` | 拆卡、写卡、spike、防作弊的验收命令 |
-| `references/dispatch.md` | 预检、派发通道、执行者管理 |
-| `references/review.md` | 审查清单、变异检验、独立审查、合并流水线 |
-| `references/stakeholder.md` | 决策台账、外部事项、怎么问拍板人 |
-| `references/lessons.md` | 19 条踩坑实录 |
-| `templates/` | 带 `{{占位符}}` 和 `【待填】` 标记的控制面模板 |
-| `scripts/init-plan.sh` | 在仓库里铺控制面（不覆盖已有文件） |
-| `scripts/wt.sh` | 一卡一 worktree：`new` / `ls` / `path` / `rm` |
-| `scripts/dispatch.sh` | 通用派发器：Claude / Codex / Hermes / DeepSeek Harness |
-| `scripts/selftest.sh` | 73 项脚本端到端自测（只在临时仓库里跑） |
+| `skill-src/<name>.md` / `.zh.md` | 英文与中文入口源文件，不直接作为技能发现 |
+| `skills/<name>/` | 生成的独立安装入口及完整运行资源 |
+| `scripts/playbook.py`、`scripts/playbook_work.py` | 策略、生命周期、执行、任务／证据／集成协议与诊断 |
+| `scripts/playbook-foundation.py` | 基座只读检查与受管的只创建初始化／补齐 |
+| `scripts/policy-dispatch.py` | 受管派发前应用已批准的执行者配置 |
+| `scripts/build-skills.py`、`scripts/check-manifests.py` | 确定性生成、漂移与本地清单检查 |
+| `references/`、`templates/` | 参考资料与计划模板的源文件 |
+| `tests/`、`scripts/selftest.sh`、`.github/workflows/ci.yml` | 离线回归与 CI |
+| `AGENTS.md`、`docs/v3-implementation.md`、`docs/v3-next-implementation.md` | 维护约定与实现合同 |
 
-`references/*.md` 是英文；`references/*.zh.md` 是对应的中文版。`templates/` 目前是中文，占位符标记为 `【待填】`。欢迎翻译。
+```bash
+python3 -I scripts/build-skills.py
+python3 -I scripts/build-skills.py --check
+python3 -I scripts/check-manifests.py
+python3 -I -m unittest discover -s tests
+bash scripts/selftest.sh
+claude plugin validate .
+```
 
-## 依赖
+CI 在 push、pull request 和手动触发时以仓库只读权限运行，矩阵为 Ubuntu 24.04／macOS 15 Intel × Python 3.9／3.13；另用固定 Claude Code 2.1.323 检查原生插件清单，不请求模型。指定提交的远端结果见 [Actions 记录](https://github.com/sakyaroy-007/orchestrator-playbook/actions)。[发布验证](docs/v3-release-validation.md)记录最终包的检查；[开发阶段报告](docs/v3-next-validation.md)保留较早的本地检查与安装边界；[试点规程](docs/v3-pilot.md)包含离线覆盖和另行限定范围的真实客户端方案。
 
-`git`、`bash`（macOS 3.2 可用）、`perl` 或 `timeout`、`sed`、`awk`。不联网、不需要 sudo、无第三方依赖。
+`--output` 指定独立技能根目录，可暂存而不改动 `skills/`。目标应使用没有符号链接祖先的物理路径；系统临时目录是别名时，可通过 `pwd -P` 取得物理路径。生成器只复制明确列入允许清单的运行脚本，以及 `references/` 和 `templates/` 中的 Markdown 资源，不复制整个仓库、`.git`、生成器或测试。
 
-## 安全边界
-
-- `init-plan.sh` 从不覆盖已有文件。
-- `wt.sh rm` 在分支未合并或有未提交改动时拒绝删除（除非 `--force`）。
-- `dispatch.sh` 不会替你放宽任何权限；执行者 CLI 需要的权限放在 `--` 后面。
-- 所有测试都在系统临时目录里的临时仓库中运行。
-
-## 贡献
-
-欢迎 issue 和 PR。改任何脚本前先跑 `scripts/selftest.sh`，必须保持全绿。如果你在别的项目里用过这套方法，告诉我们哪一环坏了、你怎么修的——`references/lessons.md` 是最值得长大的部分。
-
-## 许可证
+每个生成技能都有 `.playbook-generated.json`，记录受管文件、摘要与权限。构建预先检查全部五个目标，拒绝无标记技能目录、符号链接、路径冲突和被本地改写的生成文件，保留其他文件与兄弟目录。过期生成文件只有仍符合已记录的摘要和权限才会删除。请修改源文件，再重新生成；不要直接编辑生成副本。`--check` 不写入，发现漂移或不安全输入时以非零退出。写入按文件原子替换，整个构建不是跨文件事务，中断后应检查现场再重跑。
 
 MIT，见 [LICENSE](LICENSE)。

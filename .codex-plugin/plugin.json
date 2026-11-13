@@ -1,23 +1,23 @@
 {
   "name": "orchestrator-playbook",
-  "version": "2.0.0",
-  "description": "Multi-agent orchestration: one orchestrator plans, splits task cards, dispatches workers in parallel git worktrees, reviews every branch and is the only one who merges.",
+  "version": "3.0.0",
+  "description": "Five explicit project lifecycle skills: choose an action, start, resume, hand off and take over cooperating sessions on one machine.",
   "author": { "name": "Sakyaroy", "url": "https://github.com/sakyaroy-007" },
   "homepage": "https://github.com/sakyaroy-007/orchestrator-playbook",
   "repository": "https://github.com/sakyaroy-007/orchestrator-playbook",
   "license": "MIT",
-  "keywords": ["skills", "multi-agent", "orchestration", "workflow", "code-review", "worktree"],
-  "skills": "./",
+  "keywords": ["skills", "multi-agent", "orchestration", "lifecycle", "handoff", "worktree"],
+  "skills": "./skills/",
   "interface": {
     "displayName": "Orchestrator Playbook",
-    "shortDescription": "Plan, dispatch, review and merge across multiple coding agents",
-    "longDescription": "Use when you are appointed orchestrator: split work into self-contained task cards, dispatch them to worker agents in parallel git worktrees, review every branch yourself, and merge as the only integrator.",
+    "shortDescription": "Start, resume, hand off and take over project sessions",
+    "longDescription": "Five explicit-only skills guide initial project questions, portable policy and session ownership. Managed operations cooperate through a shared local lock; arbitrary client tools remain outside that protocol.",
     "developerName": "Sakyaroy",
     "category": "Developer Tools",
     "capabilities": ["Read", "Write", "Interactive"],
     "defaultPrompt": [
-      "Act as the orchestrator for this repo: read the control plane and tell me what is next.",
-      "Split this milestone into task cards and dispatch the first wave."
+      "Use playbook to show my project's status and available lifecycle actions.",
+      "Use playbook-start to ask the setup questions for this project."
     ],
     "websiteURL": "https://github.com/sakyaroy-007/orchestrator-playbook"
   }

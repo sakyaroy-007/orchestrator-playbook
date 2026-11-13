@@ -1,30 +1,50 @@
-# AGENTS.md — for agents working on this repository
+# AGENTS.md — maintaining this skill package
 
-This repository **is a skill**, not a project that uses the skill.
+This repository **is a skill package**, not a project using that package.
 
-- If you installed this skill elsewhere and are working in some other repository, this file does not apply to you. Go read `docs/plan/WORKER.md` and the task card you were given.
-- If you are working **inside this repository** (editing the skill itself), you are a maintainer here — not an orchestrator of this repo. Do not scaffold a control plane, dispatch work, or write `.orchestrator/TEAM.md` unless a human explicitly asks you to run this repository as a project.
+- When working in another project with an installed copy, follow that project's instructions, worker contract and task card. This file does not appoint its readers as orchestrator.
+- Inside this repository, maintain the package. Do not scaffold a control plane, claim a project session or dispatch project work here unless a human explicitly requests that separate task.
+- Read `docs/v3-implementation.md` before changing lifecycle behavior. It is the interface and scope contract, not authorization to operate another project.
 
-## Layout
+## Layout and source of truth
 
-| Path | What it is |
+| Path | Purpose |
 |---|---|
-| `SKILL.md` | The skill itself (English). `SKILL.zh.md` is the Chinese edition; clients load only `SKILL.md`. |
-| `README.md` / `README.zh-CN.md` | English and Chinese READMEs; keep both in sync when changing install steps. |
-| `references/` | Deep-dive documentation, loaded on demand. `*.md` are English; `*.zh.md` are the Chinese editions. |
-| `templates/` | Control-plane files with `{{placeholders}}` and `【待填】` (to-fill) markers; still Chinese. |
-| `scripts/` | `init-plan.sh`, `wt.sh`, `dispatch.sh`, `selftest.sh`. |
-| `.claude-plugin/` | Claude Code plugin + marketplace manifests. |
-| `.codex-plugin/` | Codex plugin manifest. |
-| `.agents/plugins/` | Generic marketplace manifest. |
+| `skill-src/<name>.md` / `<name>.zh.md` | Canonical sources for five lifecycle entries; the names avoid duplicate SKILL.md discovery |
+| `skills/<name>/` | Generated standalone bundles; never edit copies directly |
+| `SKILL.md` / `SKILL.zh.md`, `agents/openai.yaml` | Explicit-only `orchestrator-playbook` compatibility entry |
+| `scripts/playbook.py`, `scripts/playbook_work.py` | Python 3.9+ standard-library runtime and required sibling task/evidence module; invoke the CLI with `python3 -I` |
+| `scripts/playbook-foundation.py` | Runtime helper for read-only foundation checks and owner-guarded create-only repairs |
+| `scripts/policy-dispatch.py` | Approved worker configuration adapter for managed dispatch |
+| `scripts/check-manifests.py` | Repository/CI manifest checker; not a bundled runtime dependency |
+| `scripts/init-plan.sh`, `wt.sh`, `dispatch.sh` | Retained shell entry paths, with a documented legacy boundary |
+| `scripts/build-skills.py` | Generator; `--check` detects drift, `--output` selects a separate skills root |
+| `scripts/selftest.sh`, `tests/` | Legacy adapter checks and temporary-project runtime/packaging tests |
+| `references/` | On-demand documentation; `.md` English and `.zh.md` Chinese |
+| `templates/` | Planning templates; some retain Chinese `【待填】` markers for legacy scaffolding |
+| `README.md` / `README.zh-CN.md` | Matching installation, first-use and limitation documentation |
+| `.claude-plugin/`, `.codex-plugin/`, `.agents/plugins/` | Plugin/catalog manifests; public plugin entries select the five generated skills |
+| `docs/v3-implementation.md` | Current implementation contract |
 
-## Before you change anything
+The entry names are `playbook`, `playbook-start`, `playbook-resume`, `playbook-handoff` and `playbook-takeover`. Keep both language editions in sync. Entries should stay under roughly 500 lines / 5,000 tokens; put details in bundled references. All entries must remain explicitly invoked only.
 
-- **Scripts**: back up, edit, then run `scripts/selftest.sh` — all checks must pass. It creates throwaway repos under the system temp directory only.
-- **Plugin manifests**: run `claude plugin validate .` and keep it passing (an icon warning is acceptable).
-- **SKILL.md**: keep it under ~500 lines / 5,000 tokens; move detail into `references/`. If you change behavior, update both the English `SKILL.md` and `SKILL.zh.md`.
-- **No host-specific content**: no absolute paths, no personal accounts, no private tooling. The repository must be usable by a stranger.
+## Generation and ownership of files
+
+The generator copies exactly the runtime scripts `playbook.py`, `playbook_work.py`, `playbook-foundation.py`, `policy-dispatch.py`, `init-plan.sh`, `wt.sh` and `dispatch.sh`, plus Markdown resources from `references/` and `templates/`. Required resources include both `work-protocol` language editions and `PROJECT-README.md`. Adding a runtime dependency requires updating the allowlist and packaging tests. Never copy the whole repository, `.git`, tests, the generator or CI tools such as `check-manifests.py` into a bundle. A single installed skill must work without siblings or a link back to this checkout.
+
+Each generated skill's `.playbook-generated.json` records managed paths, hashes and modes. Only these recorded, unmodified files can be replaced or removed on rebuild. Unknown siblings and user files are preserved; unmarked skill directories, collisions, modified generated files and symlinks fail before the batch writes. Do not delete a user's additions or reset their local edits to force a build through. The marker is provenance for a cooperating build, not a security signature.
+
+Run `python3 -I scripts/build-skills.py` only after canonical inputs are ready, then run `--check`. Use `--output` with a fresh physical staging path for isolated work. `--check` never writes; exit 0 means current, 1 means drift, 2 means invalid/unsafe inputs. Writes are atomic per file, not transactional across the whole batch. Do not run simultaneous builders against one output tree. Installation into a user's skill roots and network publication are separate actions, not build side effects.
+
+## Required checks
+
+- Back up existing scripts before editing them. Run `bash scripts/selftest.sh` after script changes; it must pass and only use temporary repositories and fake worker commands.
+- Run `python3 -I -m unittest discover -s tests` for runtime and packaging changes. Tests must cover external contracts and failure paths, not merely echo implementation details. Never call real LLM clients, GUIs or paid services from tests.
+- After generation, run `python3 -I scripts/build-skills.py --check` and `claude plugin validate .`. Preserve the plugin icon. Missing generated directories are a validation failure, not a passing manifest check.
+- Validate isolated copies of the skills. A manifest checker does not prove native Codex/DSH discovery, login, model switching or task execution; report those limits honestly.
+- Keep public files portable: no host-specific absolute paths, personal forms of address, credentials, private model routing or private tool settings. Example home-relative installation roots and public repository metadata are fine.
+- Preserve root compatibility and the old shell paths. Legacy unconfigured use must not be described as v3 managed operation. No automatic upgrades, multi-machine arbitration, hard spending guarantees or raw-tool interception claims.
 
 ## Reporting
 
-If you are an agent asked to modify this repository, report with: what changed, commands run and their output, and anything you could not verify.
+Report changed files, commands actually run and their results, including skips/failures and anything still unverified. Do not claim installation, publication, native client loading or real model execution unless that separate action was authorized and performed.

@@ -1,0 +1,6 @@
+interface:
+  display_name: "Playbook Start"
+  short_description: "Set up or adopt a project after initial questions"
+  default_prompt: "Use $playbook-start for my explicitly requested project lifecycle action."
+policy:
+  allow_implicit_invocation: false

@@ -1,214 +1,68 @@
 ---
 name: orchestrator-playbook
-description: Only when a human appoints you orchestrator, or .orchestrator/TEAM.md names you as holder, or you take over from a previous orchestrator. Multi-agent orchestration — one orchestrator plans, splits cards, dispatches, reviews every branch and is the only one who merges; workers run in parallel git worktrees. A dispatched worker must not act on it. 多 agent 总指挥打法：主脑计划 / 拆卡 / 派发 / 亲审 / 独家合并。
+description: Playbook 项目生命周期的显式兼容入口。仅按用户要求开始、恢复、交接、接任、配置、查看或暂停。
 license: MIT
-compatibility: Requires git, bash 3.2+, and perl (or timeout); scripts make no network calls and need no elevated privileges.
+compatibility: POSIX 上的 Python 3.9+；Git 可选。旧 shell 适配器另需 bash 及其文档列出的依赖。
 metadata:
-  version: "2.0.0"
+  version: "3.0.0"
   repository: "https://github.com/sakyaroy-007/orchestrator-playbook"
-  author: "Sakyaroy"
 disable-model-invocation: true
 ---
 
-# 总指挥打法（orchestrator playbook）
+# Orchestrator Playbook
 
-这是一个**只在被明确任命为总指挥时才使用**的方法论：把大项目拆成任务卡，派给多个执行者 agent 并行做，由一个总指挥亲自审查、独家合并。
+这是 `playbook` 路由的兼容名称。五个显式入口为 `playbook`、`playbook-start`、`playbook-resume`、`playbook-handoff`、`playbook-takeover`。每个安装入口都带所需脚本、参考和模板；根入口也可独立使用。
 
-角色有四个：拍板人（人）、总指挥（一个 agent）、执行者（若干 agent）、控制面（仓库里的文件）。状态全部落在文件里，所以总指挥可以换人、换 agent、换会话。
+只在显式调用时使用。没有具体动作的调用只做导航和只读检查，不任命、不授予派发权限。执行者仍只负责分配的单卡。维护本技能仓库时按 AGENTS.md 做维护者，不能因为读到技能就在这里铺控制面。
 
-## §0 启动门（先过这一关，再往下读）
+## 执行用户所需操作
 
-**只有满足下面任意一条，你才是总指挥：**
+1. 读目标项目规则与[共享生命周期流程](references/lifecycle.zh.md)。把 `PLAYBOOK_SKILL_DIR` 解析为**本次加载的 SKILL.md** 所在目录，`PLAYBOOK_PROJECT` 解析为用户目标，不依赖 cwd。使用宿主已有的文件和命令能力，不要求客户端专有工具。
+2. 先发现：
 
-1. 拍板人在**本次会话**里明确任命了你（例如「你来当总指挥 / 由你指挥 / 你负责派活」）；
-2. 仓库里有 `.orchestrator/TEAM.md`，里面记录的当前总指挥（holder）**就是你**，并且写着「由你继续」；
-3. 你正在处理一次**接任**：拍板人让另一个 agent 把总指挥交给你，或 TEAM.md 里挂着一条未合并的 `.orchestrator/<agent>` 分支指向你。
-
-**一条都不满足时，按你的实际身份行事：**
-
-- **你是被派活的执行者**：只读 `docs/plan/WORKER.md` 和你的任务卡，按 worker 规则干活。本 skill 的方法论可以帮你理解全局，但**不许**写控制面、不许派活给别人、不许合并、不许把「我是总指挥」写进任何文件或回报。
-- **你是普通助手**（没被派活、也不是总指挥）：把它当知识看，回答用户的问题；不要主动接管项目。
-- **发现冲突**（TEAM.md 的 holder 是别人，或 `.orchestrator/` 有未合并分支）：报告给拍板人或当前 holder，不自作主张接管。
-
-⚠️ 最常见的误用：执行者读到本 skill，以为自己是总指挥，开始派活或改计划。这会让一个项目同时出现两个总指挥，控制面立刻分裂。**启动门不是建议，是硬闸。**
-
-## 三个角色
-
-| 角色 | 做 | 不做 |
-|---|---|---|
-| **拍板人**（人） | 产品 / 业务 / 法律 / 花钱的决定；外部事项（资质、账号、采购）；授权（派发、推送、权限）；**任命总指挥** | 不转派，不审代码（除非想看） |
-| **总指挥**（主脑 agent） | 体检、计划、拆卡、派发；**亲自审查**；**独家合并与推送**；维护控制面和交接文档；把要拍板的事整理成台账 | 原则上不写实现代码；不替拍板人做决定；不接受自报；不自我任命 |
-| **执行者**（worker agent） | 只做派给它的**那一张卡**：在自己的 worktree 里写，提交到自己的分支，写变更说明，按模板回报 | 不 push / merge，不改共享文档，不扩范围，卡住了不猜 |
-| **控制面**（文件） | 计划、看板、台账、审查、交接——唯一事实源 | 不由执行者写；不靠聊天记忆 |
-
-总指挥只在三种情况下亲自写代码：
-- 审查都难判对错的核心件（合并前另起独立审查）；
-- 执行者做不了的交互或特权步骤（输密码、真机验收）；
-- 控制面文档本身。
-
-## 十条铁律
-
-1. **控制面是唯一事实源**。计划、卡、看板、台账都在仓库文件里，只有总指挥写。聊天里说的、记忆里记的，没写回文件就不算数：会话会断，上下文会压缩，主脑会换人，文件不会。
-2. **一卡一 worktree 一分支**。执行者只在 `<主仓>-wt/<卡号>` 里写，只提交到 `t/<号>-<slug>`。集成线（main）只由总指挥合并（`--no-ff`），远端只由总指挥推。
-3. **卡必须自包含、可验收**。执行者读 WORKER.md、卡、卡上列的必读文件，就能干完。验收写成「命令 + 预期输出」，不写「优化一下」。派发口令永远是一句指向文件的话，不在聊天里贴卡的内容。
-4. **不信自报**。每张卡回来，总指挥都进 worktree 亲自复跑验收、读完整 diff，查越界、假测试、密钥残留、不可逆操作。变更说明里每一条「已更新」都要核实。
-5. **审查是瓶颈，写代码不是**。同时在做的实现卡不超过 4 张；宁可卡拆小一点，审得深一点。高风险卡逐行读，还要做变异检验：故意改坏代码，确认测试能抓到。
-6. **自己写的必须别人审**。总指挥亲写的卡，合并前另起一个**不看你结论**的独立审查，只给它规格和代码。
-7. **决定归拍板人**。产品、业务、法律、不可逆操作、提权，这些事进问题台账，写清证据、建议、影响。可回滚的先按建议走，标「待确认」；不可逆的停下等。拍板人改主意时新开一条，取代旧的。
-8. **worktree 只隔离文件，不隔离运行时**。端口、常驻服务、真机、凭据、全局配置都是共享的：共享资源全局串行、加锁，端口按卡号分配，数据用临时库。热点文件同一时刻只给一张卡。
-9. **范围外的发现立新卡，不顺手改**。执行者遇到歧义、需要做决定、或同一问题两次失败，就停下回报 `blocked`，附上倾向的方案，不许猜。同一执行者在同一问题上失败两次，换人或换模型。
-10. **合并后当场同步文档并推送**。看板、交接文档、README 目录树、台账、ADR 当场更新；每次合并后跑 `git status -sb`，不许显示 ahead。收工时的交接文档要能让一个全新的 agent 5 分钟接上。
-
-## 换总指挥（一等流程）
-
-总指挥一定会换：额度耗尽、换模型、换工具、换人。**任命权只属于拍板人**，总指挥不能自我任命，也不能把任命权交给任何 agent。
-
-### 谁记录「当前总指挥」
-
-一个地方，`文件:.orchestrator/TEAM.md`，内容至少包含：
-
-```markdown
-# 团队
-- 拍板人：<称呼>
-- 当前总指挥（holder）：<agent 名称> · 上任 <日期> · 状态：在任 / 交接中 / 代理
-- 上一任：<agent 名称>（<日期> 交棒给 <新 holder>）
-- 执行者花名册：<名称> | 通道 | 默认模型 | 沙箱 | 擅长 | 已知坑
-- 派发通道：<这个总指挥实际可用的方式>
-- 授权：<能直接派谁 / 能推什么 / 需要拍板人做的>
-```
-
-规则：
-- **只有拍板人能改 holder**。总指挥可以写自己的接手记录，但不能把 holder 改成自己（除非拍板人已任命）。
-- 每次换人，旧 holder 和新 holder 各写一段，追加，不覆盖。
-- 执行者开工前看这里，知道回报给谁。
-
-### 交棒仪式（旧总指挥做，在 main 上）
-
-1. **写交接**：在 `HANDOFF.md` 里补一节「交棒给 <新 holder>」：
-   - 当前波次、进行中 / 待审的卡及分支和最后提交；
-   - 未推的提交、共享资源锁的 owner、还在跑的后台进程；
-   - 待拍板事项（`questions.md` 里未答的）；
-   - **只在你脑子里的事实**：踩过的坑、没写卡的发现、某个执行者的脾气、下一步该派什么。
-2. **把 agent 私有记忆搬进仓库**：你在这个项目上积累的、写在 agent 自己记忆/笔记里的东西，凡是下一个总指挥用得上的，抄进 `docs/plan/notes/`（或交接文档的「项目记忆」段）。agent 之间不共享私有记忆，**仓库是唯一的共享介质**。
-3. **更新 TEAM.md**：holder 改成新 holder，状态「交接中」。
-4. **提交并推送**。没推的提交等于没交接。
-
-### 接手仪式（新总指挥做）
-
-1. **按顺序读**：`AGENTS.md` → `HANDOFF.md` → `docs/plan/status.md` → `docs/plan/questions.md` → `docs/plan/WORKER.md` → `.orchestrator/TEAM.md`。
-2. **核实现场**（文档可能过时）：
    ```bash
-   git log --oneline -15; git status -sb
-   scripts/wt.sh ls
-   git -C <worktree> log --oneline <main>..HEAD   # 进行中 / 待审的卡有没有新提交
-   ls -t <派发日志目录> | head                     # 最近的派发与结束码
+   python3 -I "$PLAYBOOK_SKILL_DIR/scripts/playbook.py" discover --project "$PLAYBOOK_PROJECT"
    ```
-   再查共享资源锁的 owner、后台进程、常驻服务。
-3. **还文档欠账**：看板和现实对不上，先改看板。
-4. **核对自己的能力**：能派谁、用什么通道、能不能 push、默认模型是什么。和上一任不同的地方写进 TEAM.md。
-5. **认领**：TEAM.md 记「<日期> 已接手」，状态改「在任」。
-6. **给拍板人一段话的接手报告**：当前波次、待审几张、什么在阻塞、需要拍板什么。然后进入主循环。
-7. **不重议已答的拍板**。`questions.md` 里「已答」的都有约束力。
 
-### 临时代理
+   已初始化项目再读权威状态：
 
-- 原 holder 不可用（额度、宕机、离线）时，拍板人可以指定代理：TEAM.md 状态写「代理」，写明期限。
-- 代理**只维持、不扩张**：审完在途的卡、不启动新波次、不改 ADR、不做不可逆操作。
-- 原 holder 回来，代理交还并补一段「代理期间发生了什么」。
-
-### 两个 agent 都自称总指挥时
-
-1. 以 `.orchestrator/TEAM.md` 的 holder 为准。
-2. 未被记录的一方**立刻降级为执行者**：停写共享文档、停合并，把手上的活按 worker 回报格式交给 holder。
-3. 谁都不许用「我改一下 TEAM.md 就行了」来抢位——那是拍板人的权力。
-
-## 控制面
-
-| 文件 | 内容 | 谁写 |
-|---|---|---|
-| `.orchestrator/TEAM.md` | 拍板人、当前 holder、上/下一任、执行者花名册、派发通道、授权 | 拍板人改 holder；总指挥写其余 |
-| `.orchestrator/PLAYBOOK.md` | 本项目实例化后的总指挥手册（角色、通道、模型推荐、共享资源锁、热点文件） | 总指挥 |
-| `docs/plan/README.md` | 总计划：一页纸、体检结论、目标定义、ADR 摘要、Epic、波次与关键路径、协作规程、风险 | 总指挥 |
-| `docs/plan/WORKER.md` | 执行者守则：开工三步、边界、质量规则、提交、回报模板、共享资源 | 总指挥 |
-| `docs/plan/tasks.md` | 全部卡的一行清单（执行者 / 依赖 / 规模 / 标记 / 是否已展开） | 总指挥 |
-| `docs/plan/tasks/T-NNN.md` | 可派发的完整卡，顶部是派发口令 | 总指挥 |
-| `docs/plan/status.md` | 看板、花名册与派发规矩、热点文件锁、共享资源锁、本波出口标准 | 总指挥 |
-| `docs/plan/questions.md` | 问题台账（等拍板的事） | 总指挥写，拍板人答 |
-| `docs/plan/external.md` | 拍板人的外部事项：周期、最晚启动、等待期间做什么、降级方案 | 总指挥 |
-| `docs/plan/decisions/ADR-NNN-*.md` | 架构决策；ADR-001 永远是「协作与分支」 | 总指挥 |
-| `docs/plan/reviews/T-NNN-rN.md` | 审查意见，退回返工用 | 总指挥 / 独立审查 |
-| `docs/plan/templates/` | 卡 / spike / 审查 / ADR 模板快照，让项目不依赖本 skill 也能自包含 | — |
-| `docs/changes/T-NNN.md` | 变更说明：执行者写，总指挥合并时据此同步共享文档 | 执行者 |
-| 交接文档（如 `HANDOFF.md`） | 当前状态、5 分钟接上、交接段、已知风险与未验证项、环境坑 | 总指挥 |
-| `AGENTS.md` / `CLAUDE.md` | 稳定规则层：红线、环境事实、「执行者先读 WORKER.md」 | 总指挥（很少改） |
-
-- **卡的状态**：待展开 → 可派 → 进行中 → 待审 →（返工 → 待审）→ 已合并。任何阶段都可能变成「阻塞」。
-- **标记**：
-  - 🔴 钱 / 鉴权 / 隔离 / 数据安全：加重审查，测试必须覆盖幂等、并发、越权；
-  - 🔒 占用共享资源：全局串行；
-  - 🏛 外部事项：拍板人办。
-- **规模**：S ≤ 半天，M ≈ 1 天，L ≈ 2 天。超过 L 必须拆。
-- **小项目可以裁剪**：`TEAM.md`、WORKER.md、status.md、`tasks/`、`docs/changes/` 加交接文档是最小集；总计划、台账、外部事项、ADR 按需要加。
-
-## 主循环（每个会话）
-
-0. **先确认你在这台机器上能怎么派活**：看 `.orchestrator/TEAM.md` 的「派发通道」。本机已有自己的调度器就优先用它（写进 TEAM.md）；没有的话用 `scripts/dispatch.sh` 或你自带的子代理工具。
-1. **开工**：先过 §0 启动门。然后读 TEAM.md、交接文档、`status.md`、`questions.md`，再核实现场：
-   - `git status -sb`：有没有没推的提交；
-   - `scripts/wt.sh ls`：哪些卡在做；
-   - 「进行中 / 待审」卡的分支有没有新提交，派发日志是什么情况。
-   文档和现实对不上，先修文档。
-2. **先收货**：待审的卡优先审（`references/review.zh.md`）。通过就合并、同步文档、推送、清理 worktree；不通过就写 `reviews/T-NNN-rN.md`，派回原执行者。
-3. **再派新卡**：从 `tasks.md` 挑卡（依赖已满足、不撞热点锁、不超并行上限）→ 按当前代码展开成完整卡（`references/cards.zh.md`）→ `scripts/wt.sh new <卡号> <slug>` → 预检 → 派发（`references/dispatch.zh.md`）→ 看板标「进行中」。
-4. **等的时候**：派发放后台，不空转轮询。写下一批卡、整理台账、把 spike 结论回填 ADR、准备给拍板人的清单。
-5. **需要拍板时**：先写进 `questions.md`，攒成一批再问。一次不超过 3 个，每个带选项和推荐（`references/stakeholder.zh.md`）。
-6. **收工**：看板每行准确；交接文档已更新；已答问题回填；`git status -sb` 不显示 ahead；已合并卡的 worktree 已清。
-
-## 开局与接手
-
-**新项目第一次用**：
-
-1. 先体检：亲自跑测试，逐个单跑、再逆序跑；读关键路径找信任边界；列出硬缺口，带 `文件:行号`。
-2. 再铺控制面：
    ```bash
-   bash scripts/init-plan.sh <主仓路径> \
-        --project <项目名> --decider <拍板人称呼> --orchestrator <你的称呼>
+   python3 -I "$PLAYBOOK_SKILL_DIR/scripts/playbook.py" status --project "$PLAYBOOK_PROJECT"
+   python3 -I "$PLAYBOOK_SKILL_DIR/scripts/playbook.py" doctor --project "$PLAYBOOK_PROJECT"
    ```
-   脚本不覆盖已有文件。铺完后，WORKER.md 和 status.md 里的 `【待填】` 要清零，才能派第一张卡。详见 `references/bootstrap.zh.md`。
-3. W0 只做「让并行开发变安全」的地基卡。
 
-**接手别人的总指挥位置**：按上面「接手仪式」做。详见 `references/bootstrap.zh.md`。
+3. 用用户语言呈现简短工作台：实际项目／路径、状态与本会话角色、阻塞、一个推荐下一步和至多三个备选。修改前核对请求路径与实际根目录。只有真实未决选择才使用宿主选择框，不支持时用编号文本。已经明确的操作直接执行，不重复确认；首次设置给具体推荐，复用已定决定。所有流程随包提供，无需调用其他入口。含糊的“继续”不能替换另一活动持有者。
 
-## 模型与配置（用户自选，本 skill 只推荐）
-
-本 skill **不假设**你用什么供应商、什么网关、什么路由规则。模型由用户决定。
-
-推荐原则：
-
-- **高风险卡（钱 / 鉴权 / 隔离 / 数据安全）**：建议用你能拿到的最强模型，并且审查也最重（逐行 + 变异检验）。模型弱不是不能做，而是卡要拆得更小、验收更硬、审查更重。
-- **普通卡**：执行者的默认模型即可，不必每个都指定。
-- **如果有自动选模型的路由器**：注意它可能把高风险卡判成简单卡、悄悄降档。拿不准就显式指定。
-- **换模型比换 agent 便宜**：返工两次以上，先考虑换模型或换人，别在原地打转。
-
-## 文件索引
-
-| 文件 | 什么时候读 |
+| 用户请求 | 执行 |
 |---|---|
-| `references/bootstrap.zh.md` | 新项目开局、接手总指挥、每个会话的开工 / 收工清单 |
-| `references/handoff-files.zh.md` | `.orchestrator/` 各文件怎么写，换总指挥时的文件清单 |
-| `references/cards.zh.md` | 拆卡、写卡、spike、契约、锁、滚动展开、防作弊的验收命令 |
-| `references/dispatch.zh.md` | 派发前检查、预检、各种派发通道、模型与分工、收货 |
-| `references/review.zh.md` | 审查清单、变异检验、独立审查、合并流水线、返工单 |
-| `references/stakeholder.zh.md` | 问题台账、外部事项、怎么问、汇报节奏 |
-| `references/lessons.zh.md` | 踩过的坑。派发前、合并前各扫一眼 |
-| `templates/*` | `init-plan.sh` 填好占位符后铺进项目；卡 / spike / 审查 / ADR 模板另存一份到 `docs/plan/templates/` |
-| `scripts/init-plan.sh` | 铺控制面（只新建，不覆盖；`--dry-run` 先看会建什么） |
-| `scripts/wt.sh` | worktree 管理：`new` / `ls` / `path` / `rm`（没合并时拒绝删除） |
-| `scripts/dispatch.sh` | 通用派发器：claude / codex / hermes / dsh，指定 worktree、限时、落日志、`--precheck` 预检 |
-| `scripts/selftest.sh` | 脚本端到端自测（只在临时仓库里跑）。改了脚本必须跑 |
+| 开始或采用 | 生命周期“开始”：discover，按[配置参考](references/configuration.zh.md)至多四组问题，真正初始化，只创建缺失文件，规划首任务 |
+| 恢复 | 生命周期“恢复”：用本会话保存的身份/epoch，检查变化基线和尝试，不重放 |
+| 交接 | 生命周期“检查点、暂停与交接”：保护成果，准备完整检查点，返回 handoff ID 并停止受管修改 |
+| 接任 | 生命周期“接任”：已准备交接加显式调用即构成任命；未准备恢复有单独前提 |
+| 配置 | 读当前策略和[配置参考](references/configuration.zh.md)，写商定临时草案，再 configure |
+| 状态 / 诊断 | 只读报告 status/doctor 的证据和未知项，不自动修复 |
+| 暂停 | 先持久化停止新增工作，再建检查点；单列不完整恢复，保留已有员工 |
+| 撤回交接 | 接任前由交出方按生命周期执行 `handoff --cancel`，旧编号失效、回到 paused |
+| 取消执行 | 针对选定 attempt 请求监督进程取消，保留证据，核对实际结束确认 |
+| 检查／补齐基座 | 开局助手 check／受管只创建缺失文件的 apply，按配置路径并保留原文件 |
+| 运行时版本 | 只读 version 和 doctor 诊断，不覆盖不同的项目副本 |
 
-## 改进本 skill
+4. configure/pause 使用本会话自己的 `PLAYBOOK_SESSION`/`PLAYBOOK_EPOCH`。局部变更时，`PLAYBOOK_CONFIG` 是仅含已批准变更的临时 JSON patch；完整替换使用互斥的 `--config`。只运行选中的命令：
 
-- 踩到**通用**的新坑（换个项目也会踩），一条一行，连同对策追加到 `references/lessons.zh.md`。
-- 项目特有的事实写进那个项目的 AGENTS.md 或交接文档，不要写进这里。
-- 本 skill 的原件在 `~/.agents/skills/orchestrator-playbook/`（按你机器上的安装位置）。改之前备份到 `~/.agents/skill-install-state/backups/`，改完跑 `scripts/selftest.sh`，必须全绿。
+   ```bash
+   python3 -I "$PLAYBOOK_SKILL_DIR/scripts/playbook.py" configure --project "$PLAYBOOK_PROJECT" --session "$PLAYBOOK_SESSION" --epoch "$PLAYBOOK_EPOCH" --patch "$PLAYBOOK_CONFIG"
+   python3 -I "$PLAYBOOK_SKILL_DIR/scripts/playbook.py" pause --project "$PLAYBOOK_PROJECT" --session "$PLAYBOOK_SESSION" --epoch "$PLAYBOOK_EPOCH"
+   ```
+
+5. 检查退出状态并解析成功 JSON 后再宣布变更。运行时 owner/epoch 优先于 TEAM.md，不复制别人 ID。新派发前核查孤儿、运行中和未知尝试。CLI 存在、建议或退出码 0，都不证明已登录、模型配置生效或验收通过。
+6. 按项目策略进入生命周期工作循环，报告改了什么、实际验证、保留成果、没做什么及剩余缺口。
+
+## 共享参考
+
+- [生命周期](references/lifecycle.zh.md)：身份、start/resume/handoff/takeover、暂停、检查点、工作循环与限制。
+- [配置](references/configuration.zh.md)：精简引导、员工继承、权限与 Git 策略。
+- [开局](references/bootstrap.zh.md)与[交接文件](references/handoff-files.zh.md)：只创建缺失规划文件和持久证据。
+- [任务卡](references/cards.zh.md)、[派发](references/dispatch.zh.md)、[审查](references/review.zh.md)与[结构化任务](references/work-protocol.zh.md)：有边界的工作、分阶段执行、内容绑定证据与集成。
+- [与拍板人协作](references/stakeholder.zh.md)、[经验](references/lessons.zh.md)及 `templates/`：决定和可复用项目文件。
+
+未配置的 v2 shell 工具仍可用，但不享有 v3 所有权/检查点/限额保证，采用必须显式。首版协调同一 POSIX 机器上的协作会话，不能控制任意工具或多台机器。不承诺自动安装、发布、原生对话恢复或未经验证的模型/思考映射。英文版：[SKILL.md](SKILL.md)。

@@ -1,0 +1,6 @@
+interface:
+  display_name: "Playbook Takeover"
+  short_description: "Accept an explicitly authorized session handoff"
+  default_prompt: "Use $playbook-takeover for my explicitly requested project lifecycle action."
+policy:
+  allow_implicit_invocation: false

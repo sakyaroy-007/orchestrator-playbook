@@ -1,88 +1,60 @@
-# Bootstrap, takeover, and session checklists
+# Bootstrap and session checklists
 
-## A. Starting a new project
+Use [lifecycle](lifecycle.md) for authority and commands, and [configuration](configuration.md) for the four setup question groups. Bootstrap follows successful runtime initialization; it does not appoint a holder by writing files.
 
-Do these in order, and keep evidence for each step.
+## Inspect an existing or new project
 
-### 1. Get the starting decisions (Q-00)
+Start with read-only discovery and project instructions. Record the actual Git HEAD/branch/worktrees and dirty/untracked state, or a non-Git baseline description. Read existing plans and settled decisions before asking anything. Keep the evidence split into observed facts, unverified claims and gaps.
 
-Ask the human four things and record them as Q-00 in `questions.md`, marked answered:
+Choose initial checks according to the intended change and project policy:
 
-- **Goal**: what counts as "done", in one sentence, and who signs off.
-- **Red lines**: what will never be done, for any reason.
-- **Version control**: is there a remote, private or public, who may push.
-- **Dispatch**: does the orchestrator dispatch directly (which commands are allowed), or does the human relay?
+- Run the relevant baseline tests/build/smoke checks only when authorized; record exact commands, cwd, exit status and actual output. A failed baseline remains visible.
+- Test isolation/order when tests share state, parallel work is planned, or evidence suggests a dependency. Run affected tests alone or in reversed/randomized order as justified; do not require every test in every order for every project.
+- Inspect the relevant trust and transaction boundaries. Check whether credential paths are ignored without printing their values or dumping secret-bearing history.
+- Distinguish discovered client executables, verified adapter capability and authentication readiness. A capability recommendation is not an observation.
 
-Do not re-ask what the conversation or existing docs already answer; cite them instead.
+Write the plan's findings as “keep” and “gaps”, each with evidence location and a proposed owning card. Unrun checks are listed as gaps, never passes.
 
-### 2. Inspect (verify everything yourself; do not copy old docs)
+## Create or repair only missing foundations
 
-- **Tests**: run the full suite, then **each test alone**, then **in reverse order**. Order dependencies make parallel work fail at random. The source project had 19 of 52 tests fail when run alone.
-- **Build, start, smoke**: does it come up from zero? Record the real commands.
-- **Credentials**: scan history for secrets, e.g. `git log -p | grep -iE 'secret|token|password|BEGIN .*PRIVATE'` (adapt the pattern). Check that credential files are gitignored.
-- **Trust boundaries**: read the critical paths. Who can call this endpoint? Who supplies durations, amounts, identities?
-- **Environment facts**: do workers have sandboxes, what are the default models, what is missing on this machine? These determine how cards are written.
-- **Output**: write section 1 of the master plan with two parts:
-  - "solid, keep" list;
-  - "hard gaps" table: `# | gap | evidence (file:line / command output) | owning card`.
+After successful `init`, use normalized configuration `paths` for the plan, worker rules, cards and handoff. Existing-project adoption first identifies which files to reuse and any conflicting conventions. Preserve existing README, AGENTS, plans, handoff and source. Existing content needing changes becomes scoped follow-up work, not an implicit replacement.
 
-### 3. Scaffold the control plane
+Use the bundled foundation helper for both Git and non-Git projects, including custom paths. `minimal` is the default: a truthful project-root README, configured planning/worker/handoff files, first-card draft and required runtime copies. `standard` adds the board, decisions and review resources. Choose standard only when useful to the project; the number of files does not establish readiness.
 
 ```bash
-bash scripts/init-plan.sh <repo> \
-     --project <name> --decider <human> --orchestrator <orchestrator> \
-     [--wt-base <dir>] [--main <branch>] [--handoff <handoff file>] [--agents-md AGENTS.md] [--dry-run]
+python3 -I "$PLAYBOOK_SKILL_DIR/scripts/playbook-foundation.py" check --project "$PLAYBOOK_PROJECT" --profile minimal
 ```
 
-1. Run with `--dry-run` first. Existing files are never overwritten; if the project already has a handoff doc, point `--handoff` at it.
-2. Add the printed snippet to `AGENTS.md` (or let `--agents-md` do it). Worker clients read it and learn to read WORKER.md first.
-3. Fill every `【to fill】` marker:
-   - **Before the first card**, WORKER.md and status.md must have none left: `grep -rn '【' docs/plan/WORKER.md docs/plan/status.md`;
-   - the important ones are WORKER.md §2 "do not touch" (credential dirs, daemons, real hardware) and §3 test commands.
-4. If each worktree needs its own environment (venv, node_modules, build dir), write an executable `scripts/wt-setup.sh <worktree>`; `wt.sh new` calls it automatically.
-5. Commit: `docs(plan): scaffold the control plane`.
+Report create/retain/conflict results, including differing existing helpers. A new independent project inside another Git repository must not silently become that enclosing repository. Resolve the target before applying. For explicit start or a requested missing-file repair, use this session's retained identity/epoch:
 
-### 4. Write the master plan (`docs/plan/README.md`)
+```bash
+python3 -I "$PLAYBOOK_SKILL_DIR/scripts/playbook-foundation.py" apply --project "$PLAYBOOK_PROJECT" --profile minimal --session "$PLAYBOOK_SESSION" --epoch "$PLAYBOOK_EPOCH"
+```
 
-- **One page**: how far from the goal; the critical path (often external licenses, accounts, approvals, not code); rough schedule; acceptance gates.
-- **Definition of done**: golden paths end-to-end; bottom lines for money / security / recoverability / compliance, each one verifiable; and an explicit **not doing** list.
-- **ADRs**: only decisions that constrain multiple cards. ADR-001 is always "collaboration and branching": integration line, worktree layout, shared resources, hot files, migration rules.
-- **Then**: epics (goal, exit criteria, main worker, card count), waves, critical path, risk register (trigger, mitigation, owner).
+Apply enters the runtime scaffold guard. It checks current ownership and active state, preflights targets and only creates missing files. It never overwrites a file that appeared after preview. Symlink escapes and conflicting targets are blockers. The runtime source/hash manifest supports version diagnosis; it is not permission to upgrade an existing copy. Do not set recursion markers manually. Scaffold metadata for explicit start/repair needs no duplicate permission prompt and grants no dispatch, dependency-installation or Git permission.
 
-### 5. Split cards
+The same `check`/`apply` flow supports “check collaboration files” and “fill missing files” from the main entry. Check is read-only and does not appoint a session. An uninitialized project must start/adopt first. A paused/prepared or different-owner project follows the lifecycle rules before writing. The old `init-plan.sh --dry-run` and create-only path remain available for legacy/default Git layouts; do not use `--agents-md` to rewrite instructions during adoption.
 
-- Put every card in `tasks.md` as one line; expand only the current wave into full cards (see `references/cards.md`).
-- **Wave 0 is foundations only**: test isolation, CI, configuration, migrations, worktree tooling. The point is to make parallel work safe. Do not stack features on a red baseline.
-- External items go to `external.md`; start everything that can start in week one.
+Generated first-card content is a draft. Complete the real goal, acceptance criteria, content scope, dependencies, exclusive resources, actual commands, current baseline, policy reference and reporting destination. Explicitly assign lightweight checks to the implementation worker and heavy/shared checks to owner-scheduled verify after dispatch ends. Register the completed structured spec and check readiness. Unknown commands or unresolved placeholders remain blockers; do not invent results to remove them.
 
-### 6. Open the wave
+A configured `wt.sh new` only creates the worktree inside guard; executable `scripts/wt-setup.sh` is reported as `setup pending`. After guard returns, follow the approved setup procedure in [dispatch](dispatch.md), without nested managed runs, and verify completion before implementation dispatch. Installing dependencies or starting services is not an implicit bootstrap action.
 
-Give the human one page: plan summary plus this week's list (unanswered questions and external items, in order). Start W0 once dispatch is authorized.
+## Plan the first useful work
 
-## B. Taking over as orchestrator (new agent / new session / after compaction)
+- Write a short goal/definition of done and an explicit scope boundary. Reuse the configured plan path and existing decisions.
+- Use ADRs only for choices spanning cards; record collaboration/branching policy where needed without overriding config.
+- Keep a one-line backlog, expand only the next ready cards against the current code, and name their contract/acceptance; see [cards](cards.md).
+- Make collaboration foundations the first card only when they block safe progress. Existing red tests need a recorded cause and disposition; do not claim the baseline is green or blindly stack dependent work on it.
+- Non-Git projects use one active operation and local snapshots, not fake branch/worktree instructions. The orchestrator may implement a bounded task; choose review according to impact and policy.
 
-1. **Read in order**: `AGENTS.md` → handoff doc → `docs/plan/README.md` §0 and the collaboration section → `status.md` → `questions.md` (everything answered is binding; do not relitigate) → `WORKER.md` → `.orchestrator/TEAM.md`.
-2. **Verify the live state**; docs may lag:
-   ```bash
-   git log --oneline -15; git status -sb        # unpushed / uncommitted work
-   scripts/wt.sh ls                             # active cards, ahead/behind, dirty worktrees
-   git -C <worktree> log --oneline main..HEAD   # new commits on in-flight / in-review cards
-   ls -t <dispatch log dir> | head              # recent dispatches and exit codes
-   ```
-   Also check shared-resource lock owners and running services.
-3. **Pay documentation debt first**: if the board disagrees with reality, fix the board before anything else.
-4. **Check your own capabilities**: dispatch channel; permissions (direct dispatch? push? a single exact command?); model. Record differences from the previous holder in `status.md` and `TEAM.md`.
-5. **Send the human a one-paragraph takeover report**: current wave, cards in review, blockers, decisions needed. Then enter the session loop.
+## Resume, takeover and close
 
-## C. Every session
+Resume is only for the same owning session; takeover follows prepared handoff or explicit recovery. Read the configured handoff, board, ledger and worker rules, then compare with runtime `status`/`doctor`. Check orphaned and in-flight work before new dispatch. Do not start services or rerun tests merely because a new session began.
 
-**Start**: handoff doc → board → decision ledger → verify the live state → review before dispatching.
+Before closing while still owner:
 
-**Wrap-up checklist**:
-
-- [ ] every row in `status.md` matches reality: state, commit, log path, key acceptance numbers in the note
-- [ ] handoff doc "current state" and "next steps" updated with absolute dates
-- [ ] today's decisions folded back into ADRs, cards, and the ledger
-- [ ] `git status -sb` does not show "ahead"; control-plane changes committed
-- [ ] merged cards' worktrees removed with `wt.sh rm`
-- [ ] background processes you started are stopped or recorded in the handoff doc
+- Reconcile board rows with actual attempts, commits, dirty state, logs and acceptance evidence.
+- Record baseline, config revision, absolute date, next steps, unresolved decisions and known background processes.
+- Keep commits/pushes/retention consistent with project policy; unpushed work is allowed when documented.
+- Preserve dirty/unmerged/running/unknown/evidence-bearing worktrees; cleanup requires its own checks and permission.
+- Checkpoint, pause or hand off through the runtime as appropriate. Do not edit shared files after handoff becomes prepared.

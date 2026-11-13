@@ -1,13 +1,13 @@
 #!/bin/bash
 # wt.sh — 一卡一 worktree 一分支（orchestrator-playbook；只由总指挥运行）
 #
-#   wt.sh new  <卡号> <slug> [--from <分支>]   从 main（或 --from）切 t/<号>-<slug>，建 worktree，跑 scripts/wt-setup.sh（如有），打印预检与派发口令
+#   wt.sh new  <卡号> <slug> [--from <分支>]   建分支/worktree 并打印口令；v3 的 setup 另行运行，legacy 自动调用钩子
 #   wt.sh ls                                   列出 worktree，以及每个 t/* 分支相对 main 的落后 / 领先、最后提交、有无未提交改动
 #   wt.sh path <卡号>                          打印 worktree 路径
-#   wt.sh rm   <卡号> [--force]                合并后清理（未合并或有未提交改动时拒绝，除非 --force）
+#   wt.sh rm   <卡号> [--force]                合并后清理；v3 拒绝 force 并保留未整合、dirty、ignored 成果
 #
 # 卡号：T-003 → 分支 t/003-<slug>；S-01 → t/s01-<slug>；其他前缀 X-12 → t/x12-<slug>
-# 主仓定位：WT_ROOT → 本脚本所在仓库的主检出 → 当前目录所在仓库的主检出（每次都会打印，核对一眼）
+# 定位：WT_ROOT → 当前目录 → 脚本目录；v3 再从共享状态取得规范项目根（每次打印供核对）
 # 可选环境变量：WT_BASE worktree 根（默认 <主仓>-wt）· WT_MAIN 集成分支（默认 main）
 # 兼容 macOS 自带 bash 3.2（不用关联数组；set -u 下不展开空数组）。
 set -euo pipefail
@@ -37,8 +37,55 @@ resolve_root() {
 }
 
 ROOT="$(resolve_root)"
-WT_BASE="${WT_BASE:-${ROOT}-wt}"
 MAIN="${WT_MAIN:-main}"
+WORKER_REL="docs/plan/WORKER.md"
+CARDS_REL="docs/plan/tasks"
+managed=0
+common="$(git -C "$ROOT" rev-parse --path-format=absolute --git-common-dir 2>/dev/null || true)"
+[ ! -e "$ROOT/.orchestrator/config.json" ] || managed=1
+if [ -n "$common" ] && [ -e "$common/orchestrator-playbook" ]; then managed=1; fi
+
+# v3 projects use shared state to locate canonical policy, even when init ran
+# in a linked checkout. The marker only prevents recursion under guard.
+if [ "$managed" -eq 1 ]; then
+  runtime="$(cd "$(dirname "$0")" && pwd -P)/playbook.py"
+  [ -f "$runtime" ] || die "v3 runtime missing beside wt.sh; restore the reviewed playbook.py before mutating worktrees"
+  command -v python3 >/dev/null 2>&1 || die "v3 worktree management requires Python 3.9+"
+  policy_status="$(python3 -I "$runtime" status --project "$ROOT")" \
+    || die "cannot read canonical policy; run playbook doctor"
+  policy_value() {
+    python3 -I -c 'import json,sys; value=json.load(sys.stdin)
+for key in sys.argv[1].split("."): value=value[key]
+print(value)' "$1" <<< "$policy_status"
+  }
+  ROOT="$(policy_value project_root)" || die "runtime status lacks project_root"
+  configured_main="$(policy_value policy.git.integration_branch)" || die "runtime status lacks integration branch"
+  WORKER_REL="$(policy_value policy.paths.worker)" || die "runtime status lacks worker path"
+  CARDS_REL="$(policy_value policy.paths.cards)" || die "runtime status lacks card path"
+  [ -z "${WT_MAIN:-}" ] || [ "$WT_MAIN" = "$configured_main" ] \
+    || die "WT_MAIN differs from the project policy; change the approved configuration first"
+  MAIN="$configured_main"
+  case "${1:-}" in
+    new|rm)
+      if [ "${1:-}" = "rm" ]; then
+        for option in "$@"; do
+          [ "$option" != "--force" ] || die "v3 never force-deletes worktrees; preserve and inspect their contents first"
+        done
+        action=cleanup
+      else
+        action=worktree-create
+      fi
+      if [ "${PLAYBOOK_GUARDED:-}" != 1 ]; then
+        [ -n "${PLAYBOOK_SESSION:-}" ] && [ -n "${PLAYBOOK_EPOCH:-}" ] \
+          || die "set PLAYBOOK_SESSION and PLAYBOOK_EPOCH from playbook start/resume; a client name is not a session identity"
+        exec python3 -I "$runtime" guard --project "$ROOT" \
+          --session "$PLAYBOOK_SESSION" --epoch "$PLAYBOOK_EPOCH" --action "$action" \
+          -- bash "${runtime%/*}/wt.sh" "$@"
+      fi
+      ;;
+  esac
+fi
+WT_BASE="${WT_BASE:-${ROOT}-wt}"
 
 git_root() { git -C "$ROOT" "$@"; }
 
@@ -77,7 +124,7 @@ cmd_new() {
   branch="t/$(num_of "$id")-$slug"
   [ ! -e "$wt" ] || die "已存在：$wt"
   if git_root show-ref --verify --quiet "refs/heads/$branch"; then die "分支已存在：$branch"; fi
-  [ -f "$ROOT/docs/plan/WORKER.md" ] || echo "wt: ⚠️ $ROOT/docs/plan/WORKER.md 不存在——还没铺控制面？（init-plan.sh）" >&2
+  [ -f "$ROOT/$WORKER_REL" ] || echo "wt: ⚠️ $ROOT/$WORKER_REL 不存在——按项目策略补齐员工说明。" >&2
 
   mkdir -p "$WT_BASE"
   git_root worktree add -b "$branch" "$wt" "$from" >/dev/null
@@ -89,9 +136,16 @@ cmd_new() {
   fi
 
   if [ -x "$wt/scripts/wt-setup.sh" ]; then
-    echo "准备环境：scripts/wt-setup.sh …"
-    (cd "$wt" && ./scripts/wt-setup.sh "$wt") \
-      || die "wt-setup.sh 失败；worktree 已建好（${wt}），修好后手动重跑：cd $wt && ./scripts/wt-setup.sh $wt"
+    if [ "$managed" -eq 1 ]; then
+      # Creation is a short guarded mutation. A setup hook can itself call
+      # managed verification and must not wait recursively for this same lock.
+      echo "wt: setup pending: $wt/scripts/wt-setup.sh"
+      echo "worktree 已创建；guard 返回后，按项目获准的设置/验证流程单独运行此脚本，再派发正文。"
+    else
+      echo "准备环境：scripts/wt-setup.sh …"
+      (cd "$wt" && ./scripts/wt-setup.sh "$wt") \
+        || die "wt-setup.sh 失败；worktree 已建好（${wt}），修好后手动重跑：cd $wt && ./scripts/wt-setup.sh $wt"
+    fi
   fi
 
   cat <<EOF
@@ -100,7 +154,7 @@ cmd_new() {
 只执行 pwd 和 git branch --show-current，原样输出结果，不做别的。
 
 派发口令（启动目录必须是 ${wt}）：
-读 $ROOT/docs/plan/WORKER.md 和 $ROOT/docs/plan/tasks/$id.md，在 worktree ${wt}（分支 ${branch}）里执行，完成后按 WORKER.md 第 5 节模板回报。
+读 $ROOT/$WORKER_REL 和 $ROOT/$CARDS_REL/$id.md，在 worktree ${wt}（分支 ${branch}）里执行，完成后按员工说明中的模板回报。
 EOF
 }
 
@@ -140,8 +194,15 @@ cmd_rm() {
   [ -n "$branch" ] || die "读不到 $wt 的分支"
 
   if [ "$force" -eq 0 ]; then
-    [ -z "$(git -C "$wt" status --porcelain)" ] || die "$id 有未提交改动（看 git -C $wt status）；确认要丢弃请加 --force"
-    git_root merge-base --is-ancestor "$branch" "$MAIN" || die "$branch 尚未合入 ${MAIN}；确认要丢弃请加 --force"
+    if [ "$managed" -eq 1 ]; then
+      [ -z "$(git -C "$wt" status --porcelain --untracked-files=all --ignored)" ] \
+        || die "$id contains changes, untracked or ignored files; archive evidence and explicitly dispose of caches before cleanup"
+      git_root merge-base --is-ancestor "$branch" "$MAIN" \
+        || die "$branch is not an ancestor of $MAIN; squash/PR integration needs separate verification, so this worktree is retained"
+    else
+      [ -z "$(git -C "$wt" status --porcelain)" ] || die "$id 有未提交改动（看 git -C $wt status）；确认要丢弃请加 --force"
+      git_root merge-base --is-ancestor "$branch" "$MAIN" || die "$branch 尚未合入 ${MAIN}；确认要丢弃请加 --force"
+    fi
     git_root worktree remove "$wt"
     git_root branch -d "$branch" >/dev/null
   else

@@ -1,10 +1,17 @@
 {
   "name": "orchestrator-playbook",
-  "description": "Multi-agent orchestration: one orchestrator plans, splits task cards, dispatches workers in parallel git worktrees, reviews every branch and is the only one who merges.",
-  "version": "2.0.0",
+  "description": "Five explicit project lifecycle skills: choose an action, start or adopt a project, resume, prepare a handoff, and take over with same-machine session ownership checks.",
+  "version": "3.0.0",
   "author": { "name": "Sakyaroy" },
   "homepage": "https://github.com/sakyaroy-007/orchestrator-playbook",
   "repository": "https://github.com/sakyaroy-007/orchestrator-playbook",
   "license": "MIT",
-  "keywords": ["skills", "multi-agent", "orchestration", "workflow", "code-review", "worktree"]
+  "keywords": ["skills", "multi-agent", "orchestration", "workflow", "handoff", "worktree"],
+  "skills": [
+    "./skills/playbook",
+    "./skills/playbook-start",
+    "./skills/playbook-resume",
+    "./skills/playbook-handoff",
+    "./skills/playbook-takeover"
+  ]
 }

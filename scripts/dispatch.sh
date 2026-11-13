@@ -23,6 +23,7 @@ die() { echo "dispatch: $*" >&2; exit 2; }
 usage() { sed -n '2,20p' "$0" | sed 's/^# \{0,1\}//'; exit 2; }
 
 [ $# -ge 3 ] || usage
+original_args=("$@")
 worker="$1"; wt_arg="$2"; shift 2
 precheck=0; task=""
 if [ "$1" = "--precheck" ]; then precheck=1; shift; else task="$1"; shift; fi
@@ -45,6 +46,32 @@ done
 wt="$(cd "$wt_arg" && pwd)"
 wt_phys="$(cd "$wt_arg" && pwd -P)"
 branch="$(git -C "$wt" branch --show-current 2>/dev/null || true)"
+
+# v3 projects route through the policy adapter and persistent attempt ledger.
+# The marker only avoids recursion in the managed child, not arbitrary tools.
+if [ "${PLAYBOOK_DISPATCHED:-}" != 1 ]; then
+  managed_root="${PLAYBOOK_PROJECT:-$wt}"
+  common="$(git -C "$managed_root" rev-parse --path-format=absolute --git-common-dir 2>/dev/null || true)"
+  managed=0
+  [ ! -e "$managed_root/.orchestrator/config.json" ] || managed=1
+  if [ -n "$common" ]; then
+    # The canonical config may live in any linked checkout. Shared state is
+    # authoritative; even incomplete state must never fall back to legacy.
+    [ ! -e "$common/orchestrator-playbook" ] || managed=1
+    case "$common" in
+      */.git) [ ! -e "${common%/.git}/.orchestrator/config.json" ] || managed=1 ;;
+    esac
+  fi
+  if [ "$managed" -eq 1 ]; then
+    adapter="$(cd "$(dirname "$0")" && pwd -P)/policy-dispatch.py"
+    [ -f "$adapter" ] || die "v3 policy adapter is missing; restore the reviewed skill resources"
+    export PLAYBOOK_PROJECT="$managed_root"
+    exec python3 -I "$adapter" "${original_args[@]}"
+  fi
+  if [ -n "${PLAYBOOK_SESSION:-}" ] || [ -n "${PLAYBOOK_EPOCH:-}" ] || [ -n "${PLAYBOOK_PROJECT:-}" ]; then
+    die "managed session has no project config here; refusing a silent fallback to legacy dispatch"
+  fi
+fi
 if [ -z "$tmo" ]; then
   if [ "$precheck" -eq 1 ]; then tmo=300; else tmo=7200; fi
 fi
@@ -71,8 +98,13 @@ case "$worker" in
       esac
       [ -n "$dsh_provider" ] && [ -n "$dsh_model" ] \
         || die "dsh 的 -m 要写 provider/model，例如 provider/model-name"
+      [[ ! "$model" =~ [[:cntrl:]] ]] || die "model must not contain control characters"
+      # JSON is also valid YAML; escape values instead of allowing them to
+      # introduce new patch fields. This preserves the dependency-light v2 CLI.
+      dsh_provider="${dsh_provider//\\/\\\\}"; dsh_provider="${dsh_provider//\"/\\\"}"
+      dsh_model="${dsh_model//\\/\\\\}"; dsh_model="${dsh_model//\"/\\\"}"
       dsh_patch="$(mktemp "${TMPDIR:-/tmp}/dispatch-dsh-model.XXXXXX")" || die "创建临时 patch 失败"
-      printf -- '- id: agent-default-model\n  config:\n    provider: "%s"\n    model: "%s"\n' \
+      printf '[{"id":"agent-default-model","config":{"provider":"%s","model":"%s"}}]\n' \
         "$dsh_provider" "$dsh_model" > "$dsh_patch"
       trap 'rm -f "$dsh_patch"' EXIT
     fi
@@ -92,7 +124,11 @@ mkdir -p "$(dirname "$log")"
 
 run_limited() {  # run_limited <秒> <命令…>
   local secs="$1"; shift
-  if command -v perl >/dev/null 2>&1; then
+  if [ "${PLAYBOOK_DISPATCHED:-}" = 1 ]; then
+    # The managed runtime applies the same timeout to our entire process group.
+    # A second alarm here could exit first and leave worker descendants running.
+    "$@"
+  elif command -v perl >/dev/null 2>&1; then
     perl -e 'alarm shift; exec @ARGV or die "exec failed: $!\n"' "$secs" "$@"
   elif command -v timeout >/dev/null 2>&1; then
     timeout "$secs" "$@"
@@ -102,19 +138,50 @@ run_limited() {  # run_limited <秒> <命令…>
   fi
 }
 
-{
+write_log_header() {
   echo "#dispatch| $(date '+%Y-%m-%d %H:%M:%S') 执行者=${worker} 模型=${model:-默认} 限时=${tmo}s 分支=${branch:-?}"
   echo "#dispatch| worktree=${wt}"
   echo "#dispatch| 口令=${task}"
-} > "$log"
+}
+if [ "${PLAYBOOK_DISPATCHED:-}" = 1 ]; then
+  (set -o noclobber; write_log_header > "$log") \
+    || die "refusing to overwrite an existing dispatch log: $log"
+else
+  write_log_header > "$log"
+fi
 printf '==> [%s] %s%s\n    日志: %s\n' "$worker" "$(basename "$wt")" "${branch:+ (${branch})}" "$log"
 
 start=$(date +%s)
+tee_rc=0
 set +e
-( cd "$wt" && run_limited "$tmo" "$@" ) >> "$log" 2>&1
-rc=$?
+if [ "${PLAYBOOK_DISPATCHED:-}" = 1 ] && [ "${PLAYBOOK_ACTION:-dispatch}" = verify ]; then
+  # The runtime hashes our stdout/stderr at completion. Stream the whole review
+  # there even with -q, while retaining the caller's separate dispatch log.
+  # Both sides stay in the runtime's process group and finish before its receipt.
+  ( cd "$wt" && run_limited "$tmo" "$@" ) 2>&1 | tee -a "$log"
+  pipeline_status=("${PIPESTATUS[@]}")
+  rc=${pipeline_status[0]}
+  tee_rc=${pipeline_status[1]}
+  if [ "$tee_rc" -ne 0 ]; then
+    printf 'dispatch: cannot copy complete review output to %s (tee rc=%s)\n' "$log" "$tee_rc" >&2
+    # Preserve a worker failure; a failed log copy cannot turn success into an
+    # acceptable verification either.
+    [ "$rc" -ne 0 ] || rc=$tee_rc
+  fi
+else
+  ( cd "$wt" && run_limited "$tmo" "$@" ) >> "$log" 2>&1
+  rc=$?
+fi
 set -e
 dur=$(( $(date +%s) - start ))
+
+if [ "$tee_rc" -ne 0 ]; then
+  # A failed copy may have left the user log unwritable. Best-effort reporting
+  # must not replace the saved worker/tee status with a later redirection error.
+  echo "#dispatch| 结束 rc=${rc} 用时=${dur}s" >> "$log" || true
+  echo "$log" || true
+  exit "$rc"
+fi
 
 if [ "$rc" -eq 142 ] || [ "$rc" -eq 124 ]; then
   echo "#dispatch| 超时 ${tmo}s，已终止" >> "$log"

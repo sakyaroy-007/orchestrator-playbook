@@ -1,0 +1,195 @@
+{
+  "files": {
+    "SKILL.md": {
+      "mode": 420,
+      "sha256": "cbe6f14738acc19bbd494015ba525e568856b753154c1a845dba0a7176264401"
+    },
+    "SKILL.zh.md": {
+      "mode": 420,
+      "sha256": "ad59d810bdf59ccd9632685f712658b7d43fa6311d5d9b2fb9a389c90bf3297f"
+    },
+    "agents/openai.yaml": {
+      "mode": 420,
+      "sha256": "3ff13344eab7d541db66a67067a70985ab9b5b6cf4e7fed21c5bd4ecb045af7f"
+    },
+    "references/bootstrap.md": {
+      "mode": 420,
+      "sha256": "62b98facd5c11b6916849f8e0eaa92d0d62f0ba4d94b5c1366c5950b5be8b524"
+    },
+    "references/bootstrap.zh.md": {
+      "mode": 420,
+      "sha256": "e13b0e60ccbd7fee011bb7fd4f982c963d1355a71b93110f188d1cf975c29eee"
+    },
+    "references/cards.md": {
+      "mode": 420,
+      "sha256": "d1f678a7ee13144aec408b781d5a9e31381580c86c9d74fc6bb1596d68f1183d"
+    },
+    "references/cards.zh.md": {
+      "mode": 420,
+      "sha256": "fb3530be1f3efe3f85ae39a2619bbd161b09445fcc13b23a1329effe3d86768a"
+    },
+    "references/configuration.md": {
+      "mode": 420,
+      "sha256": "7f57094488e63ec3d4aa80d75505d260b04bf2d15dc319663cc96bd917c81661"
+    },
+    "references/configuration.zh.md": {
+      "mode": 420,
+      "sha256": "c9ab0cda4b6474070e71113696248898a6edeff0827b254da3996de09b3770b7"
+    },
+    "references/dispatch.md": {
+      "mode": 420,
+      "sha256": "97c7fc6dd1e817d8a04aba3d8b87f5bd46e0e61cd5a8148da119cd6d8467914a"
+    },
+    "references/dispatch.zh.md": {
+      "mode": 420,
+      "sha256": "96af8d1ec0aeb4f088b5f9bf77702c46a787625ce2abd3dd96b3aaacac50faa5"
+    },
+    "references/handoff-files.md": {
+      "mode": 420,
+      "sha256": "529cc5d4bb523143bcc118e499f4286d4db04a79440621fd8eac3dca15b5c1d1"
+    },
+    "references/handoff-files.zh.md": {
+      "mode": 420,
+      "sha256": "afbc7eddc11ae8875332e7f113e8441ceaa41202207ae85b78316fdb40d66c12"
+    },
+    "references/lessons.md": {
+      "mode": 420,
+      "sha256": "e8bafb3276ec81fa9a816f794a587803c35214529c11ff1a833c519500a2fbd0"
+    },
+    "references/lessons.zh.md": {
+      "mode": 420,
+      "sha256": "b2218cb8899124ac8ee695a969222252661fff9818237724a4701e7faa558271"
+    },
+    "references/lifecycle.md": {
+      "mode": 420,
+      "sha256": "c0da6976bb23780511cf4e3591426f79901db382711e481106b7ce3c9a3c924f"
+    },
+    "references/lifecycle.zh.md": {
+      "mode": 420,
+      "sha256": "93a12216de1707312442cab12d9ea36e326980618abc1ce5c9d07ec6853fc514"
+    },
+    "references/review.md": {
+      "mode": 420,
+      "sha256": "6ba8dc3f26256f88e5daef9b0477261ca7e215a0e57f1b5c5503ee00615b85a5"
+    },
+    "references/review.zh.md": {
+      "mode": 420,
+      "sha256": "09deb24ec39a84e6fbd8e1fdcf234f16aba6d5d2e94ff1877a158b0ce573ff8b"
+    },
+    "references/stakeholder.md": {
+      "mode": 420,
+      "sha256": "7df1377bb8dc9a60c7a6b90b26a7585acb8fd003e68ccd85a4effbcb106edbd1"
+    },
+    "references/stakeholder.zh.md": {
+      "mode": 420,
+      "sha256": "e64ffb8d314cf291668e7a95bccb1046001cabe15fef78fb9dab6f6d60ad7822"
+    },
+    "references/work-protocol.md": {
+      "mode": 420,
+      "sha256": "90fe2868977bbed4b0ea43b05146afd8299c7acb320998abbd66ab1a68d04834"
+    },
+    "references/work-protocol.zh.md": {
+      "mode": 420,
+      "sha256": "3c97cb88b3508850eaf0571e93ca7760f81f0a269bbc61c42eba7bda89efdeff"
+    },
+    "scripts/dispatch.sh": {
+      "mode": 493,
+      "sha256": "3f7462ac41d67b6c06fd2848176b21b5d1cf210d451ff0485402239b009c704d"
+    },
+    "scripts/init-plan.sh": {
+      "mode": 493,
+      "sha256": "134a172de0953723d188e004893be1a12bb1374f6dcf97677d9c2df180f4c75a"
+    },
+    "scripts/playbook-foundation.py": {
+      "mode": 493,
+      "sha256": "c5d13c885fc6de1a459fea3a927d8909bc6683df964011b1674e2b4012d70e16"
+    },
+    "scripts/playbook.py": {
+      "mode": 493,
+      "sha256": "fe88556295e27012906e4132651677af72bc0f763b37f6cf594cfba9374bafbb"
+    },
+    "scripts/playbook_work.py": {
+      "mode": 493,
+      "sha256": "e25d2e28a3e7efdee0654b6d1ab3b2daa86ff1d7639d64c12fffc854c9babc36"
+    },
+    "scripts/policy-dispatch.py": {
+      "mode": 493,
+      "sha256": "e63b79ee2938be67d70c37bf4accc936836bda1bed72871f6c896cac7fd5f40d"
+    },
+    "scripts/wt.sh": {
+      "mode": 493,
+      "sha256": "c483c36f7e437f83d0576de231cccbcf87dd5a271bba6629c83fc1e5cfbdf84a"
+    },
+    "templates/ADR-001.md": {
+      "mode": 420,
+      "sha256": "a009b5f2cbc0af00776c60d8f9331f9d3397c08a5db9aca7972a0ff86177ffaa"
+    },
+    "templates/ADR.md": {
+      "mode": 420,
+      "sha256": "fb000ad35dd3e5b6dfe2ddf121b2fbfecc15c01f083558041b8781e8bee4b813"
+    },
+    "templates/AGENTS-snippet.md": {
+      "mode": 420,
+      "sha256": "e14ce8a20317463c679eef617b7ab919b59b9b4c58b08f7265b7c9e412252d71"
+    },
+    "templates/HANDOFF.md": {
+      "mode": 420,
+      "sha256": "d440fa63813db25cf21a8c461f3e39da02a9a50cdaa3e431cc6ac58307384303"
+    },
+    "templates/PLAYBOOK.md": {
+      "mode": 420,
+      "sha256": "eef13a3d4fc858dae1e833196b036f79e42ebc7bb71c3ad9f37a2488b9d1b642"
+    },
+    "templates/PROJECT-README.md": {
+      "mode": 420,
+      "sha256": "6a64ac14c3f080a34fd526d26873eb5026ccb869387b42fd7267f63ef9c300b3"
+    },
+    "templates/TEAM.md": {
+      "mode": 420,
+      "sha256": "e12f611eadafacfc2da2b1412a3965a8877188205e765e7be6463707d9ea75a0"
+    },
+    "templates/WORKER.md": {
+      "mode": 420,
+      "sha256": "55d271af1dc8ea780dffc2710a06a8cadc6e768e2b9d13fdf16b8a53a930822c"
+    },
+    "templates/changes-README.md": {
+      "mode": 420,
+      "sha256": "de2e8a0fcf470453008cb980c658cd47783fc97aa3b3708b82307c96b129a4c6"
+    },
+    "templates/external.md": {
+      "mode": 420,
+      "sha256": "c3f065622e5494c207bf03655edc64d5816c122ccd8241f981122a32ece70e31"
+    },
+    "templates/plan-README.md": {
+      "mode": 420,
+      "sha256": "178bb3f13088e8365f7ffb8df2e7402f9a4ed56e865023a49f6d741942ce718b"
+    },
+    "templates/questions.md": {
+      "mode": 420,
+      "sha256": "19d7c7c60f97eb7b43c5589511a0d556a6659f5402aa3567312764a105be1083"
+    },
+    "templates/review.md": {
+      "mode": 420,
+      "sha256": "d6bd66c9666d02accc5eb3b6b27e59e7e32c17ab5768261112d70e7bb5fc3851"
+    },
+    "templates/spike-card.md": {
+      "mode": 420,
+      "sha256": "7e977260b4216e18b0f7916e7fdfe5a2fe99f7e7f3e0abc75fab767db15cfbb7"
+    },
+    "templates/status.md": {
+      "mode": 420,
+      "sha256": "823d4355146cec6243f76c90efb035989a23d04e6622b764a0c265cde8cd1a77"
+    },
+    "templates/task-card.md": {
+      "mode": 420,
+      "sha256": "2da826aead083453b303bc964596493fe102515fd807c7a3b048916fcfcff79b"
+    },
+    "templates/tasks.md": {
+      "mode": 420,
+      "sha256": "9427fc44f65d09235277a3ad3f8e362885c8d5720068f62c6f2127c792135121"
+    }
+  },
+  "format_version": 1,
+  "generator": "orchestrator-playbook/scripts/build-skills.py",
+  "skill": "playbook-takeover"
+}

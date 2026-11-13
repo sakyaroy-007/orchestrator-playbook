@@ -1,9 +1,11 @@
 {
   "name": "orchestrator-playbook",
-  "interface": { "displayName": "Orchestrator Playbook" },
+  "interface": { "displayName": "Orchestrator Playbook — five lifecycle skills" },
   "plugins": [
     {
       "name": "orchestrator-playbook",
+      "version": "3.0.0",
+      "description": "Five explicit project lifecycle skills, supplied through the package's ./skills/ directory.",
       "source": { "source": "url", "url": "./" },
       "policy": { "installation": "AVAILABLE", "authentication": "ON_INSTALL" },
       "category": "Developer Tools"

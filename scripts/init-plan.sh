@@ -72,6 +72,27 @@ if [ -n "$agents_md" ]; then
 fi
 today="$(date +%Y-%m-%d)"
 
+# A configured project's scaffolding is a managed metadata mutation. Preview
+# remains read-only; actual writes must not alter another owner's prepared state.
+if [ "$dry" -eq 0 ] && { [ -e "$root/.orchestrator/config.json" ] || [ -e "$common/orchestrator-playbook" ]; }; then
+  runtime="$SKILL_DIR/scripts/playbook.py"
+  [ -f "$runtime" ] || die "configured scaffolding requires the matching playbook.py"
+  if [ "${PLAYBOOK_GUARDED:-}" != 1 ]; then
+    [ -n "${PLAYBOOK_SESSION:-}" ] && [ -n "${PLAYBOOK_EPOCH:-}" ] \
+      || die "set PLAYBOOK_SESSION and PLAYBOOK_EPOCH from start/resume before scaffolding"
+    guarded_args=("$root" --project "$project" --decider "$decider" --orchestrator "$orchestrator" --wt-base "$wt_base" --main "$main" --handoff "$handoff")
+    [ "$no_handoff" -eq 0 ] || guarded_args+=(--no-handoff)
+    [ -z "$agents_md" ] || guarded_args+=(--agents-md "$agents_md")
+    if [ -n "$orch_file" ]; then
+      orch_file="$(cd "$(dirname "$orch_file")" && pwd -P)/$(basename "$orch_file")"
+      guarded_args+=(--orchestrator-file "$orch_file")
+    fi
+    exec python3 -I "$runtime" guard --project "$root" \
+      --session "$PLAYBOOK_SESSION" --epoch "$PLAYBOOK_EPOCH" --action scaffold \
+      -- bash "$SKILL_DIR/scripts/init-plan.sh" "${guarded_args[@]}"
+  fi
+fi
+
 # ---- 渲染与落盘 ----
 render() {  # render <模板文件>：替换 {{占位符}} 后输出到 stdout（值经环境变量传入 perl，特殊字符安全）
   P_PROJECT="$project" P_SLUG="$slug" P_DECIDER="$decider" P_ORCH="$orchestrator" \
@@ -144,6 +165,8 @@ else
   place "$TPL/HANDOFF.md"      "$handoff"                 render
 fi
 place "$SKILL_DIR/scripts/wt.sh" scripts/wt.sh            raw 755
+place "$SKILL_DIR/scripts/playbook.py" scripts/playbook.py raw 755
+place "$SKILL_DIR/scripts/playbook_work.py" scripts/playbook_work.py raw 755
 keep_dir docs/plan/tasks
 keep_dir docs/plan/reviews
 
@@ -200,6 +223,6 @@ cat <<EOF
   1. 填【待填】：派第一张卡前，WORKER.md、status.md、.orchestrator/TEAM.md 必须清零
      grep -rn '【待填' docs/plan/WORKER.md docs/plan/status.md .orchestrator/
   2. 核对 .orchestrator/TEAM.md 的 holder 和授权；执行者靠它知道回报给谁、自己不是总指挥
-  3. 每个 worktree 要独立环境（venv / node_modules / 构建目录）时，写可执行的 scripts/wt-setup.sh <worktree路径>，wt.sh new 会自动调用
-  4. git add .orchestrator docs/plan docs/changes scripts/wt.sh$( [ "$no_handoff" -eq 0 ] && printf ' %s' "$handoff" ) && git commit -m "docs(plan): 铺控制面（orchestrator-playbook）"
+  3. 每个 worktree 要独立环境时，写 scripts/wt-setup.sh <worktree路径>；v3 在创建完成后按获准流程单独执行，legacy 会自动调用
+  4. git add .orchestrator docs/plan docs/changes scripts/wt.sh scripts/playbook.py scripts/playbook_work.py$( [ "$no_handoff" -eq 0 ] && printf ' %s' "$handoff" ) && git commit -m "docs(plan): 铺控制面（orchestrator-playbook）"
 EOF

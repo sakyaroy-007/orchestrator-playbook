@@ -1,0 +1,347 @@
+{
+  "bundle_manifest_sha256": "d8ef91a91ada0e8a96cd302228ad53aaadd9c2673b2111dc5524547c23b87fbe",
+  "check_count": 9,
+  "checks": [
+    {
+      "bundle": "playbook-start",
+      "name": "official-generated-single-bundle",
+      "siblings_removed": true,
+      "status": "passed"
+    },
+    {
+      "foundation_profile": "minimal",
+      "name": "stored-policy-and-create-only-foundations",
+      "status": "passed"
+    },
+    {
+      "attempts_created": 0,
+      "name": "exclusive-resource-denied-before-child",
+      "rejected_task": "T-conflict",
+      "status": "passed"
+    },
+    {
+      "attempt_ids": [
+        "3a1f7830c9d340bab092c2bda4493b9e",
+        "f77ec04f5f334de293bf7c37d8a0acbb"
+      ],
+      "clock": "single parent monotonic clock",
+      "distinct_worktrees": 2,
+      "name": "parallel-implementation-barrier",
+      "observed_barrier_overlap_ns": 209886541,
+      "status": "passed"
+    },
+    {
+      "gap_ns": 451750,
+      "heavy_jobs": 1,
+      "name": "heavy-verification-serialized",
+      "overlap_ns": 0,
+      "rejected_launch_attempts_created": 0,
+      "stable_task_ids": [
+        "T-parse",
+        "T-render"
+      ],
+      "status": "passed"
+    },
+    {
+      "name": "two-tasks-evidence-to-verified",
+      "receipts": {
+        "T-parse": {
+          "content_sha256": "68a36d7d0655846718c92bba6a6004db59c6fe7d8b0a321e74e06f97884fb584",
+          "id": "43022d637fb14b2599b500f675875b6d",
+          "source_attempt": "2baa1812bd964210a9589c21e5a450e0",
+          "spec_hash": "f4a2f4a619bf2688e5007f3f4f45e2e2b59aa5c3ebc94d528b8a89ecc7da0494"
+        },
+        "T-render": {
+          "content_sha256": "ea617021598897b54adca1e03701e6d057f6afd85f03dd42b832da3b054c1476",
+          "id": "b39e28e484b745b3bc1c4e0ddcc9c030",
+          "source_attempt": "923bb04a40cd4edbb7bc7fed82698591",
+          "spec_hash": "ecaaac68aa54e6c8c6a13f8c79092e17e023be383b7f6d910975365bb4b4bea4"
+        }
+      },
+      "status": "passed"
+    },
+    {
+      "approval": "Explicit test-only policy patch; no live-user approval or external Git action is implied",
+      "assembly_attempt": "5dc064f9097b4f90a59e09d1051d54c7",
+      "merge_facts": [
+        {
+          "membership": "declared",
+          "semantic_inclusion_proven": false,
+          "source_head": "9116c361d681064702aa67477051fac27ef5aa17",
+          "source_is_ancestor": true,
+          "task": "T-parse"
+        },
+        {
+          "membership": "declared",
+          "semantic_inclusion_proven": false,
+          "source_head": "308d9fabf96251088ca4c08d780b4eabccb0f158",
+          "source_is_ancestor": true,
+          "task": "T-render"
+        }
+      ],
+      "name": "fixture-authorized-integration-and-assembly",
+      "result_hash": "da2fdd65a7fec5899be4ac94f516ceff7186cabafef2eb915819bc2f69c60534",
+      "status": "passed"
+    },
+    {
+      "attempt_ids": [
+        "3a1f7830c9d340bab092c2bda4493b9e",
+        "f77ec04f5f334de293bf7c37d8a0acbb",
+        "2baa1812bd964210a9589c21e5a450e0",
+        "923bb04a40cd4edbb7bc7fed82698591",
+        "5dc064f9097b4f90a59e09d1051d54c7"
+      ],
+      "elapsed_ns": 967640125,
+      "incoming_epoch": 2,
+      "name": "prepared-handoff-retains-evidence-without-duplicate-work",
+      "repeated_dispatches": 0,
+      "status": "passed"
+    },
+    {
+      "name": "paused-exit-and-preserved-fixtures",
+      "outstanding_attempts": 0,
+      "status": "passed"
+    }
+  ],
+  "command_count": 67,
+  "command_receipts": "commands/index.jsonl",
+  "environment": {
+    "git": "git version 2.54.0 (Apple Git-157)",
+    "machine": "arm64",
+    "os": "Darwin",
+    "python": "3.9.6",
+    "release": "27.0.0"
+  },
+  "exclusions": [
+    "Live model/client execution, authentication, native skill discovery and billing were not exercised.",
+    "Independent reviewer identities are cooperating fixture declarations, not proof of model independence.",
+    "Merge ancestry and declared membership do not prove arbitrary semantic inclusion.",
+    "Dirty-content/mtime, changed assembly target, handoff withdrawal, failed pause and cancellation use the cited focused regressions.",
+    "Non-Git/custom-path adoption uses the cited foundation regressions.",
+    "Current-source pilot reran after a reference-only test-report correction; runtime and bundle inputs were unchanged.",
+    "Local execution was macOS arm64/Python 3.9.6; remote CI and live paid worker execution were not run."
+  ],
+  "existing_regressions_not_rerun_by_this_pilot": [
+    "tests/test_work_protocol.py::WorkProtocolTests.test_typed_acceptance_needs_evidence_and_mtime_does_not_invalidate",
+    "tests/test_work_protocol.py::WorkProtocolTests.test_integration_head_change_invalidates_current_result_not_historical_dependency",
+    "tests/test_work_protocol.py::WorkProtocolTests.test_batch_integration_preserves_source_and_assembly_provenance",
+    "tests/test_foundation.py::FoundationTests.test_custom_standard_layout_preserves_existing_git_work_and_uses_templates",
+    "tests/test_foundation.py::FoundationTests.test_minimal_apply_is_create_only_truthful_and_idempotent",
+    "tests/test_runtime_next.py::RuntimeNextTests.test_pause_failure_is_durably_stopped_and_retains_failure",
+    "tests/test_runtime_next.py::RuntimeNextTests.test_handoff_withdrawal_is_idempotent_invalidates_token_and_keeps_evidence",
+    "tests/test_runtime_next.py::RuntimeNextTests.test_cancel_stops_only_supervised_attempt_and_retains_reason"
+  ],
+  "expected_nonzero_commands": 6,
+  "external_service_calls": 0,
+  "final_state": {
+    "attempts": 5,
+    "dispatches": 2,
+    "epoch": 2,
+    "mode": "paused",
+    "owner": "pilot-next",
+    "participant_states": {
+      "T-parse": "integrated",
+      "T-render": "integrated"
+    },
+    "verifications": 3
+  },
+  "fixture_check_count": 8,
+  "generator_sha256": "f170de5eb5b221415415162bf7e0850beb56ee1dd46b01c940be598a27683bec",
+  "human_interventions": 0,
+  "invocation": "python3 -I -m unittest discover -s tests -p test_offline_pilot.py -v",
+  "manual_bundle_fallback": false,
+  "package_mode": "official-generator-only",
+  "paid_model_calls": 0,
+  "policy": {
+    "limits": {
+      "agents": 2,
+      "heavy_jobs": 1,
+      "max_attempts": 2,
+      "timeout_seconds": 30
+    },
+    "permissions": {
+      "cleanup": "deny",
+      "commit": "allow",
+      "dispatch": "allow",
+      "merge": "ask",
+      "push": "deny",
+      "verify": "allow",
+      "worktree-create": "allow"
+    },
+    "runtime_api": 2
+  },
+  "runtime": {
+    "files": {
+      "dispatch.sh": "3f7462ac41d67b6c06fd2848176b21b5d1cf210d451ff0485402239b009c704d",
+      "playbook-foundation.py": "c5d13c885fc6de1a459fea3a927d8909bc6683df964011b1674e2b4012d70e16",
+      "playbook.py": "e564d724379ac6da8dab31512af2b9aba878e792376d3b01cb95587e5e3b834c",
+      "playbook_work.py": "e25d2e28a3e7efdee0654b6d1ab3b2daa86ff1d7639d64c12fffc854c9babc36",
+      "policy-dispatch.py": "e63b79ee2938be67d70c37bf4accc936836bda1bed72871f6c896cac7fd5f40d",
+      "wt.sh": "c483c36f7e437f83d0576de231cccbcf87dd5a271bba6629c83fc1e5cfbdf84a"
+    },
+    "package_version": "3.0.0",
+    "release_status": "development-unreleased",
+    "runtime_api": 2
+  },
+  "schema_version": 1,
+  "skipped_checks": [],
+  "status": "passed",
+  "test": "tests/test_offline_pilot.py::OfflinePilotTests.test_standalone_offline_pilot",
+  "test_source_sha256": "eec80eb3b05b31c52c6ddd22a1121f11664cf82c1c8ff22847f208724389225b",
+  "unexpected_exit_commands": 0,
+  "unittest_case_count": 1,
+  "worker_events": "signals/*.json",
+  "date": "2026-11-14",
+  "scope": "Core assembled offline pilot; focused regressions ran separately in the recorded full suite",
+  "generation": {
+    "command": "python3 -I -B scripts/build-skills.py --output <fresh-physical-temporary-root>/generated",
+    "drift_check": "python3 -I -B scripts/build-skills.py --check --output <fresh-physical-temporary-root>/generated",
+    "selected_bundle": "playbook-start",
+    "isolation": "Copy one generated bundle to an independent directory, remove the generated tree and all sibling bundles, then invoke only the selected bundle's CLI scripts",
+    "required_scripts": [
+      "playbook.py",
+      "playbook_work.py",
+      "playbook-foundation.py",
+      "policy-dispatch.py",
+      "wt.sh",
+      "dispatch.sh",
+      "init-plan.sh"
+    ],
+    "generator_sha256": "f170de5eb5b221415415162bf7e0850beb56ee1dd46b01c940be598a27683bec",
+    "bundle_manifest_sha256": "d8ef91a91ada0e8a96cd302228ad53aaadd9c2673b2111dc5524547c23b87fbe",
+    "test_source_sha256": "eec80eb3b05b31c52c6ddd22a1121f11664cf82c1c8ff22847f208724389225b",
+    "source_hashes_matched_when_recorded": true
+  },
+  "final_run": {
+    "status": "passed",
+    "unittest_case_count": 1,
+    "command_count": 67,
+    "check_count": 9,
+    "fixture_check_count": 8,
+    "expected_nonzero_commands": 6,
+    "unexpected_exit_commands": 0,
+    "human_interventions": 0,
+    "paid_model_calls": 0,
+    "external_service_calls": 0,
+    "unittest_returncode": 0,
+    "unittest_duration_seconds": 13.888,
+    "failed_checks": 0,
+    "skipped_checks": 0
+  },
+  "retained_evidence": {
+    "root_selection_environment_variable": "PLAYBOOK_OFFLINE_PILOT_ARTIFACTS",
+    "default_behavior": "Automatically remove the unique temporary project through unittest cleanup",
+    "retained_run_directory": "offline-pilot-i9iiiydq",
+    "paths_relative_to_run_directory": [
+      "result.json",
+      "commands/index.jsonl",
+      "commands/*.json",
+      "commands/*.stdout",
+      "commands/*.stderr",
+      "signals/*.json",
+      "inputs/",
+      "project/",
+      "parse-tree/",
+      "render-tree/",
+      "isolated/playbook-start/"
+    ],
+    "result_sha256": "e462ca72b7b8d0c4ec498ffa65c6efba7b56cfb26eca5762692300ca1b6c8a28",
+    "command_index_sha256": "58793399e1d8b4a3173d85615ce78ace3a7022009f9664f2749d536e52707190",
+    "raw_receipts_location": "External temporary evidence root, intentionally omitted from public files"
+  },
+  "validation_history": {
+    "unittest_invocations": 6,
+    "passed_invocations": 4,
+    "failed_invocations": 2,
+    "total_recorded_commands": 372,
+    "runs": [
+      {
+        "directory": "offline-pilot-udwvmceb",
+        "status": "failed",
+        "unittest_returncode": 1,
+        "duration_seconds": 7.816,
+        "command_count": 39,
+        "failed_phase": "managed heavy verification serialization",
+        "failure": "Test compared monotonic_ns values across worker processes; Python 3.9 on macOS uses process-relative monotonic origins",
+        "resolution": "Use the parent process's single clock and retained process barriers for concurrency and verification ordering; retain the original failed run",
+        "result_sha256": "46d9f6e201dba564ff7ca2295732a635223665325de827183a74406d11e8401f"
+      },
+      {
+        "directory": "offline-pilot-07vuzrge",
+        "status": "failed",
+        "unittest_returncode": 1,
+        "duration_seconds": 13.468,
+        "command_count": 65,
+        "failed_phase": "paused exit and preserved fixtures",
+        "failure": "The fixture-only merge policy patch left .orchestrator/config.json dirty, failing the final clean-worktree assertion",
+        "resolution": "Commit the explicit fixture policy patch through guard before merging; preserve the clean-worktree assertion and the failed run",
+        "result_sha256": "6c7435f782c000bc481d8adfc896f6ca16ab125be0764195c26a3f2fca9b1a4d"
+      },
+      {
+        "directory": "offline-pilot-nyo046uu",
+        "status": "passed",
+        "unittest_returncode": 0,
+        "duration_seconds": 16.91,
+        "command_count": 67,
+        "superseded_for_current_source": true,
+        "reason": "Concurrent work changed playbook_work.py after this generated-bundle snapshot; rerun against current sources",
+        "result_sha256": "9ef22867f99ada86da1f023afbdbf1471479c63272d62f260b63179d1e92ce0e"
+      },
+      {
+        "directory": "offline-pilot-4d2612wd",
+        "status": "passed",
+        "unittest_returncode": 0,
+        "duration_seconds": 15.108,
+        "command_count": 67,
+        "source_hashes_matched_when_recorded": true,
+        "result_sha256": "e018657c6b3eedc5dd550641bcc66a775076c48c4f1f4dec1aad20aadb8ef406",
+        "superseded_for_current_source": true,
+        "reason": "Subsequent reviewed runtime fixes require the final generated-bundle pilot"
+      },
+      {
+        "directory": "offline-pilot-sd4gxfxf",
+        "status": "passed",
+        "unittest_returncode": 0,
+        "duration_seconds": 13.715588959000002,
+        "command_count": 67,
+        "result_sha256": "bcb4d9f6a1a1226221bb623044b19c35ae6b631ee5620c01af7d01ee298efecc",
+        "source_hashes_matched_when_recorded": true,
+        "superseded_for_current_source": true,
+        "reason": "Passing full-suite pilot; rerun after correcting one cited regression-method name, with runtime unchanged"
+      },
+      {
+        "directory": "offline-pilot-i9iiiydq",
+        "status": "passed",
+        "unittest_returncode": 0,
+        "duration_seconds": 13.888,
+        "command_count": 67,
+        "result_sha256": "e462ca72b7b8d0c4ec498ffa65c6efba7b56cfb26eca5762692300ca1b6c8a28",
+        "source_hashes_matched_when_recorded": true
+      }
+    ],
+    "scope": "Retained pilot runs recorded here; not a count of every component-test invocation"
+  },
+  "full_regression": {
+    "ok": true,
+    "tests": 219,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "seconds": 244.360970416,
+    "python": "3.9.6",
+    "by_module": {
+      "test_dependency_baseline": 8,
+      "test_evidence_regressions": 5,
+      "test_foundation": 23,
+      "test_manifests": 11,
+      "test_offline_pilot": 1,
+      "test_packaging": 20,
+      "test_playbook": 61,
+      "test_policy_dispatch": 23,
+      "test_runtime_next": 15,
+      "test_shell_integration": 32,
+      "test_work_protocol": 20
+    },
+    "execution": "Instrumented unittest discovery over tests/; equivalent suite selection to python3 -I -m unittest discover -s tests"
+  }
+}

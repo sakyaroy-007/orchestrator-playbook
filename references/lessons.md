@@ -1,14 +1,19 @@
 # Lessons from real runs
 
-Format: pitfall → countermeasure. Skim before dispatching and before merging. Append new ones at the end.
+Format: pitfall → countermeasure. Skim before dispatching and before merging. Append new ones at the end. These observations inform project choices; [lifecycle](lifecycle.md) and [configuration](configuration.md) define current authority and policy.
+
+- A client name or TEAM.md was mistaken for an appointment → use a specific session ID and runtime epoch; resume cannot take another session's role.
+- A recommendation was reported as an applied model setting → separate discovery, verified adapter mapping, authentication and observed execution.
+- An interrupted job was launched again → inspect reserved/running/unknown attempts, worktrees and logs first; keep late results and never infer absence from elapsed time.
+- A cleanup removed evidence → preserve dirty, untracked, ignored, unmerged and active work; retention and proof of integration still apply when permission is allow.
 
 1. **You think you dispatched a strong model; the default cheap one ran.** → Check the log after dispatching to see the model actually used. Do not gamble a high-risk card on a difficulty-based auto-router.
 2. **A one-shot worker hits an interaction (sudo password, authorization dialog) and exits.** → State "offline-verifiable only" in the card; leave interactive and privileged steps to the orchestrator or the human. Decide who runs that step before dispatching.
-3. **Merges stopped being pushed; twelve commits piled up.** → After every merge run `git status -sb`; it must never show "ahead".
+3. **Unpushed commits were forgotten.** → Record ahead/behind state and follow the configured push permission/cadence. Local-only work is valid when preserved and documented; no mandatory push follows a merge.
 4. **A change note claims "updated" but nothing changed.** → Verify every claim during review; a false claim is itself a must-fix.
 5. **A branch started from another unmerged branch, and the upstream was reworked later.** → Record the starting point on the board; update to the upstream's final version and re-run acceptance before merging.
 6. **An app's branch picker checked out in the main repo, or created its own worktree.** → Only use dispatch methods that take an explicit working directory; preflight pwd and branch before every dispatch.
-7. **Tests had order dependencies: 19 of 52 failed alone.** → During inspection run each test alone and in reverse order; fix it before starting parallel work.
+7. **Tests had order dependencies: 19 of 52 failed alone in one project.** → When shared state or parallel execution makes isolation relevant, run affected tests alone or in reversed/randomized order. Record actual failures; do not impose every ordering on unrelated changes.
 8. **Worktrees isolate files, not runtime: two service instances under one user, and a bare `pkill -f <name>` killed the wrong one.** → Always match processes by full path; lock shared resources globally; allocate ports per card.
 9. **zsh aborts on an unmatched glob and kills the whole `&&` chain**, so a background service never started. → Quote `*`, `[`, `?` in arguments; keep globs out of start commands; delete temp files by exact name or `find … -delete`.
 10. **Workers have no sandbox** (full access, or approvals auto-approved). → Boundaries rest on WORKER.md prohibitions and shared-resource locks. Name credential dirs, daemons, and system settings one by one; rotate any secret a worker could have seen before release.

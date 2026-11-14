@@ -4,7 +4,7 @@ description: 显式恢复当前占任会话，检查基线变化与已有任务�
 license: MIT
 compatibility: POSIX 上的 Python 3.9+；Git 可选。
 metadata:
-  version: "3.0.0"
+  version: "3.1.0-dev.1"
 disable-model-invocation: true
 ---
 

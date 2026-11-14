@@ -1,6 +1,6 @@
 # v3 implementation contract
 
-This repository is being maintained as a skill package; do not initialize its own control plane. This document records the initial v3 implementation contract, not authorization to operate another project. The [next-iteration contract](v3-next-implementation.md) extends it with runtime API 2, partial configuration, structured acceptance/integration, cancellation, foundations and version diagnostics; where behavior is extended, use that contract and the current CLI references.
+This repository is being maintained as a skill package; do not initialize its own control plane. This document records the initial v3 implementation contract, not authorization to operate another project. The [next-iteration contract](v3-next-implementation.md) extends it with runtime API 2, partial configuration, structured acceptance/integration, cancellation, foundations and version diagnostics; where behavior is extended, use that contract and the current CLI references. The unpublished [Hermes adapter contract](hermes-adapter.md) adds a gateway employee backend and native explicit command plugin without upgrading user installations.
 
 ## Product scope
 

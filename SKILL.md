@@ -4,7 +4,7 @@ description: Explicit compatibility entry for Playbook project lifecycle operati
 license: MIT
 compatibility: Python 3.9+ on POSIX; Git optional. Legacy shell adapters also require bash and their documented dependencies.
 metadata:
-  version: "3.0.0"
+  version: "3.1.0-dev.1"
   repository: "https://github.com/sakyaroy-007/orchestrator-playbook"
 disable-model-invocation: true
 ---

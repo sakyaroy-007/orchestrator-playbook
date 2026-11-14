@@ -2,6 +2,23 @@
 
 All notable changes to this project are documented here. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning follows [Semantic Versioning](https://semver.org/).
 
+## [3.1.0-dev.1] — Unreleased
+
+### Added
+- Managed Hermes gateway adapter with explicit approval-request responses, model/reasoning/profile selection, persisted session/admission identities, same-owner reconnect without resubmission, and bounded cancellation cleanup.
+- Terminal admission and live resource observations separate from viewer process exit. Unconfirmed execution retains `unknown` reservations; receipts explicitly do not prove termination of arbitrary external task trees.
+- A standalone Hermes plugin builder and five native commands reusing canonical bilingual resources, with mandatory session-bound loading choice and existing host injection permission.
+- Local fake-gateway and plugin-context regression tests; no model calls or global client configuration changes.
+
+### Changed
+- Managed Hermes requires an explicit `worker.hermes.approval` choice and empty native `args`; old configurations remain readable without implicit policy changes.
+- Legacy Hermes keeps `-z` automatic approval, now documents that behavior and reports gateway execution as unknown on timeout.
+- Runtime, package and plugin manifests identify this unpublished development version; generated bundles include both gateway runtime dependencies.
+
+### Limits
+- Tested protocol assumptions target Hermes 0.23.1. Native plugin activation, frontend interaction and paid model execution have not been validated by offline tests.
+- Approval `deny` answers emitted requests; it does not override native grants or profile policy. Interrupted delegations without join proof remain unknown. Installation and permission changes are separate operations.
+
 ## [3.0.0] — 2026-11-14
 
 ### Added

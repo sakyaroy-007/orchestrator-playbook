@@ -4,7 +4,7 @@ description: 显式开始或采用项目，先只读发现，再收集精简策�
 license: MIT
 compatibility: POSIX 上的 Python 3.9+；Git 可选。
 metadata:
-  version: "3.0.0"
+  version: "3.1.0-dev.1"
 disable-model-invocation: true
 ---
 

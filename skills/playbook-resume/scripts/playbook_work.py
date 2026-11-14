@@ -449,6 +449,15 @@ def load_receipt(project, state, receipt_id):
 def checkpoint_records(project, state, snapshot):
     records = {}
     logs = set()
+    for attempt in state["attempts"]:
+        if attempt.get("external_receipt"):
+            identifier(attempt["id"], "external execution attempt")
+            relative = "logs/" + attempt["id"] + ".hermes.json"
+            require(Path(attempt["external_receipt"]) == project.runtime / relative, "Unexpected external receipt path")
+            records[relative] = snapshot.file(project.runtime, relative)
+            require(records[relative]["kind"] == "file", "External execution receipt is unavailable for recovery")
+            if (project.runtime / "logs" / (attempt["id"] + ".log")).is_file():
+                logs.add(attempt["id"])
     for receipt_id in state.get("evidence", {}):
         receipt = load_receipt(project, state, receipt_id)
         relative = "evidence/" + receipt_id + ".json"

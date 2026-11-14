@@ -4,7 +4,7 @@ description: Explicitly claim a prepared handoff as a new session, or reconcile 
 license: MIT
 compatibility: Python 3.9+ on POSIX; Git optional.
 metadata:
-  version: "3.0.0"
+  version: "3.1.0-dev.1"
 disable-model-invocation: true
 ---
 

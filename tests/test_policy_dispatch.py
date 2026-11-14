@@ -308,6 +308,30 @@ raise SystemExit(int(os.environ.get("FIXTURE_HELP_EXIT", "0")))
         self.assertFalse(self.probes.exists())
         self.assertFalse(self.launches.exists())
 
+    def test_hermes_uses_gateway_bridge_with_explicit_policy_without_help(self):
+        self.worker.update(client="hermes", hermes={"approval": "inherit"},
+                           effort={"mode": "fixed", "value": "high"},
+                           model={"mode": "fixed", "value": "chosen-model"})
+        self.dispatch()
+        argv = self.records(self.launches)[0]["argv"]
+        self.assertIn(str(self.root / "hermes-worker.py"), argv)
+        self.assertNotIn("-z", argv)
+        self.assertNotIn("dispatch.sh", " ".join(argv))
+        self.assertFalse(self.probes.exists())
+
+    def test_hermes_requires_explicit_policy_and_rejects_native_escape_hatches(self):
+        self.worker.update(client="hermes", effort={"mode": "inherit"})
+        self.worker.pop("profile")
+        self.assertIn("worker.hermes.approval", self.dispatch(expected=2).stderr)
+        self.worker["hermes"] = {"approval": "deny"}
+        for args in (["--yolo"], ["--safe-mode"], ["-z", "other task"],
+                     ["--reasoning=low"], ["-pother-profile"]):
+            with self.subTest(args=args):
+                self.worker["args"] = args
+                self.dispatch(expected=2)
+        self.assertFalse(self.probes.exists())
+        self.assertFalse(self.launches.exists())
+
     def test_unrelated_approved_codex_arguments_keep_their_exact_values(self):
         args = ["--json", "--config", 'sandbox_mode = "workspace-write"',
                 '--config=notice.hide_model_migration_prompt=true',

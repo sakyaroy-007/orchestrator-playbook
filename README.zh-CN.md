@@ -74,6 +74,10 @@ done
 
 技能安装器列出多个入口时，选择这五个。根目录 `SKILL.md` 是保留的 `orchestrator-playbook` 兼容入口；把整个仓库当作一个旧式技能安装，不等于装好了五个新入口。升级需明确操作：审阅新版本和本地改动，再替换选定的安装。本包没有自动升级器。
 
+### Hermes 原生命令
+
+Hermes 当员工不需要安装这些总指挥技能。在 Hermes 内担任总指挥时，使用 `python3 -I scripts/build-hermes-plugin.py --output /physical/staging/orchestrator-playbook` 构建专用原生插件。它复用五个规范入口，不把普通 `SKILL.md` 暴露给模型技能发现；每次命令须在当前会话选择 **Load**，gateway／TUI 注入还需要操作方审核宿主权限。详见[适配指南](adapters/hermes/README.md)与[员工配置](references/hermes.zh.md)。构建不安装、不启用、不授予权限。本开发版本有离线契约测试，真实插件／前端和付费模型执行仍待验证。
+
 ## 继续与交接
 
 - **继续：** 在持有者会话显式选择 `playbook-resume`，读取记录中的任务与现场差异。恢复对话不会自动重复派发或测试。
@@ -93,7 +97,7 @@ done
 
 权限值是 `allow`、`ask` 或 `deny`，缺少授权不等于允许。用户明确回答可以一次性授权常规本地工作，不必每张卡重复确认。`ask` 和 `deny` 不执行被守卫的动作。允许推送不等于允许部署或发布；允许清理也仍须检查脏工作、未合并修改、运行中的执行者和需保留的证据。
 
-`inherit` 使用每个执行者自己的默认配置；`fixed` 必须有已验证的客户端能力映射；`recommend` 在选择落实前只是提议。适配器支持明确选择模型，并在检查 CLI help 后传入 Claude effort、Codex reasoning effort 或 DSH reasoning-effort 临时覆盖。profile 覆盖支持 Codex 和 DSH；DSH 必须明确选择一个非交互 profile，模型与思考仍可继承该 profile 的设置。Hermes effort/profile 和 Claude profile 覆盖暂不支持，会在启动前阻止。参数映射与传参测试不证明已登录、模型可用或实际思考行为。项目配置里不存凭据。
+`inherit` 使用每个执行者自己的默认配置；`fixed` 必须有已验证的客户端能力映射；`recommend` 在选择落实前只是提议。适配器支持明确选择模型，并在检查 CLI help 后传入 Claude effort、Codex reasoning effort 或 DSH reasoning-effort 临时覆盖。profile 覆盖支持 Codex 和 DSH；DSH 必须明确选择一个非交互 profile，模型与思考仍可继承该 profile 的设置。Hermes 通过公开 gateway 协议选择模型／思考／profile，明确配置审批响应策略并持久跟踪 admission，完成与取消的限制见 [Hermes 参考](references/hermes.zh.md)。Claude profile 覆盖仍不支持。参数映射与传参测试不证明已登录、模型可用或实际思考行为。项目配置里不存凭据。
 
 局部变更使用 `configure --patch FILE`，例如 `{"limits":{"agents":3}}`，保留未给出的设置；`--config FILE` 仍用于有意完整替换。schema 1 旧项目仍可读取，明确启用 `runtime_api:2` 后使用扩展协议，不静默改变旧策略摘要。旧运行时会拒绝该标记，避免忽略新约束。
 
@@ -107,7 +111,7 @@ done
 
 ## 运行时诊断
 
-无需初始化项目即可运行 `python3 -I "$PLAYBOOK_SKILL_DIR/scripts/playbook.py" version`，查看实际执行路径、包／runtime API／schema 版本、能力与必要文件摘要。已初始化项目使用 `doctor --project "$PLAYBOOK_PROJECT"` 比较当前包、项目副本与 `.orchestrator/runtime-manifest.json`。缺失、不同或来源未知都明确呈现，诊断不覆盖或升级文件。3.0.0 正式版返回 `release_status:released`；应同时比较摘要与版本字符串，以识别较早的开发副本和本地修改。
+无需初始化项目即可运行 `python3 -I "$PLAYBOOK_SKILL_DIR/scripts/playbook.py" version`，查看实际执行路径、包／runtime API／schema 版本、能力与必要文件摘要。已初始化项目使用 `doctor --project "$PLAYBOOK_PROJECT"` 比较当前包、项目副本与 `.orchestrator/runtime-manifest.json`。缺失、不同或来源未知都明确呈现，诊断不覆盖或升级文件。当前源码返回 `3.1.0-dev.1` 和 `release_status:development-unreleased`，与已发布的 3.0.0 正式版分别记录；应同时比较摘要与版本字符串，识别本地修改。
 
 ## 合作边界
 

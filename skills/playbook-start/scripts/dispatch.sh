@@ -12,7 +12,7 @@
 #       日志末尾的 "#dispatch| 结束 rc=…" 表示已跑完；脚本输出的最后一行是日志路径。
 # 退出码：与执行者相同。超时为 142（perl 限时）或 124（timeout 限时）；预检不通过为 3；用法错误为 2。
 # 模型：不传 -m 时用执行者自己的默认配置。用哪个模型由你决定，skill 只给推荐（见 references/dispatch.md）。
-# 权限：本脚本不替你放宽任何权限。无人值守需要的权限，放在 -- 后面透传，例如：
+# 权限：legacy Hermes -z 会自动审批；v3 Hermes 另走显式审批策略与 gateway 回执。其他客户端权限通过 -- 传入，例如：
 #       claude … -- --permission-mode acceptEdits
 #       codex  … -- --sandbox workspace-write --add-dir <主仓>/.git   （沙箱受限时，要放行主仓的 .git，worktree 才能提交）
 # 测试用：可以用 DISPATCH_BIN_CLAUDE / DISPATCH_BIN_CODEX / DISPATCH_BIN_HERMES / DISPATCH_BIN_DSH 把执行者命令换成桩。
@@ -184,8 +184,13 @@ if [ "$tee_rc" -ne 0 ]; then
 fi
 
 if [ "$rc" -eq 142 ] || [ "$rc" -eq 124 ]; then
-  echo "#dispatch| 超时 ${tmo}s，已终止" >> "$log"
-  echo "<== [超时 ${tmo}s，已终止]" >&2
+  if [ "$worker" = hermes ]; then
+    echo "#dispatch| 超时 ${tmo}s，客户端已退出；gateway 任务状态未知，先核对，勿直接重派" >> "$log"
+    echo "<== [超时 ${tmo}s，Hermes gateway 任务状态未知]" >&2
+  else
+    echo "#dispatch| 超时 ${tmo}s，已终止" >> "$log"
+    echo "<== [超时 ${tmo}s，已终止]" >&2
+  fi
 fi
 echo "#dispatch| 结束 rc=${rc} 用时=${dur}s" >> "$log"
 

@@ -4,7 +4,7 @@ description: 显式项目工作台与生命周期入口。显示状态和下一�
 license: MIT
 compatibility: POSIX 上的 Python 3.9+；Git 可选。旧 shell 适配器另需 bash 及其文档列出的依赖。
 metadata:
-  version: "3.0.0"
+  version: "3.1.0-dev.1"
 disable-model-invocation: true
 ---
 

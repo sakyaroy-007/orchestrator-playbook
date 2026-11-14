@@ -4,7 +4,7 @@ description: Explicitly prepare a local handoff from the current owner, preservi
 license: MIT
 compatibility: Python 3.9+ on POSIX; Git optional.
 metadata:
-  version: "3.0.0"
+  version: "3.1.0-dev.1"
 disable-model-invocation: true
 ---
 

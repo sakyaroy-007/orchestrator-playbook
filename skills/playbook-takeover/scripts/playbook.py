@@ -30,10 +30,10 @@ except ImportError:
     fcntl = None
 
 SCHEMA = 1
-PACKAGE_VERSION = "3.0.0"
+PACKAGE_VERSION = "3.1.0-dev.1"
 RUNTIME_API = 2
-RUNTIME_FILES = ("playbook.py", "playbook_work.py", "policy-dispatch.py", "playbook-foundation.py", "wt.sh", "dispatch.sh")
-CAPABILITIES = ["pause-first", "handoff-cancel", "config-patch", "attempt-cancel", "task-spec", "readiness", "immutable-evidence", "integration-results", "runtime-diagnostics"]
+RUNTIME_FILES = ("playbook.py", "playbook_work.py", "policy-dispatch.py", "playbook-foundation.py", "hermes-worker.py", "hermes_gateway.py", "wt.sh", "dispatch.sh")
+CAPABILITIES = ["pause-first", "handoff-cancel", "config-patch", "attempt-cancel", "task-spec", "readiness", "immutable-evidence", "integration-results", "runtime-diagnostics", "hermes-gateway-admissions"]
 CLIENTS = ("claude", "codex", "dsh", "hermes", "manual")
 TASK_STATES = ("reserved", "running", "reported", "verified", "integrated", "blocked", "unknown")
 ACTIVE = ("reserved", "running", "unknown")
@@ -185,7 +185,12 @@ def validate_config(raw, goal=None):
     require(isinstance(config["workers"], list), "workers must be an array")
     seen = set()
     for worker in config["workers"]:
-        object_keys(worker, ("id", "client", "model", "effort", "profile", "args"), "worker")
+        object_keys(worker, ("id", "client", "model", "effort", "profile", "args", "hermes"), "worker")
+        if "hermes" in worker:
+            require(worker.get("client") == "hermes", "worker.hermes is only valid for the Hermes client")
+            object_keys(worker["hermes"], ("approval",), "worker.hermes")
+            require(worker["hermes"].get("approval") in ("inherit", "approve", "deny"),
+                    "worker.hermes.approval must be inherit, approve or deny (responses to native approval requests)")
         identifier(worker.get("id"), "worker id")
         require(worker["id"] not in seen, "Duplicate worker id: " + worker["id"])
         seen.add(worker["id"])
@@ -417,7 +422,12 @@ def attempt_status(attempt):
 def summarize(project, state, config):
     attempts = []
     for item in state["attempts"]:
-        attempts.append({key: item.get(key) for key in ("id", "task", "action", "worker", "epoch", "state", "returncode", "late_result", "log", "process", "pgid", "cancel_request", "cancelled", "cancel_acknowledgement", "spec_hash", "content_error", "integration")})
+        attempts.append({key: item.get(key) for key in ("id", "task", "action", "worker", "epoch", "state", "returncode", "late_result", "log", "process", "pgid", "cancel_request", "cancelled", "cancel_acknowledgement", "spec_hash", "content_error", "integration", "external_receipt", "external_execution")})
+        if item.get("external_receipt"):
+            try:
+                attempts[-1]["external_execution"] = external_receipt(item)
+            except Failure as exc:
+                attempts[-1]["external_execution"] = {"state": "unknown", "error": str(exc)}
         attempts[-1]["execution"] = attempt_status(item)
     return {"schema_version": SCHEMA, "project_id": state["project_id"], "project_root": state["root"], "git": project.is_git,
             "runtime_path": str(project.runtime), "config_path": state["config_path"], "owner": state["owner"], "epoch": state["epoch"],
@@ -658,7 +668,7 @@ def checkpoint(project, state, config):
         require(first == second, "Project content changed during checkpoint; stop writers and retry")
         require(project.settings(state) == config, "Configuration changed during checkpoint")
         protocol = {}
-        if state.get("evidence") or state.get("integrations"):
+        if state.get("evidence") or state.get("integrations") or any(a.get("external_receipt") for a in state["attempts"]):
             extra = Snapshot(pending)
             extra.total, extra.count = first["bytes"], first["files"]
             protocol = work_protocol().checkpoint_records(project, state, extra)
@@ -1199,7 +1209,31 @@ def wait_for_process_group(process, deadline, cancelled=None):
         time.sleep(min(0.1, remaining))
 
 
-def stop_own_group(process):
+def external_receipt(attempt):
+    path = Path(attempt["external_receipt"])
+    require(path.is_file() and path.stat().st_size <= 1024 * 1024, "Missing or oversized Hermes execution receipt")
+    receipt = read_json(path)
+    require(isinstance(receipt, dict) and receipt.get("protocol") == "hermes-gateway-v1"
+            and receipt.get("attempt_id") == attempt["id"], "Hermes receipt identity mismatch")
+    return receipt
+
+
+def confirm_external(attempt, returncode):
+    try:
+        receipt = external_receipt(attempt)
+        if receipt.get("state") == "not_submitted" and returncode != 0:
+            return receipt
+        require(receipt.get("state") == "terminal" and receipt.get("tracked_resources_idle") is True
+                and receipt.get("turn_outcome") in ("completed", "failed", "cancelled", "interrupted"),
+                "Hermes admission/resource termination is unconfirmed")
+        require(returncode != 0 or (receipt.get("returncode") == 0 and receipt.get("turn_outcome") == "completed"),
+                "Hermes success lacks a completed admission receipt")
+        return receipt
+    except Failure as exc:
+        raise ExecutionUnknown(str(exc) + "; preserve the receipt and reconcile before redispatch") from exc
+
+
+def stop_own_group(process, grace=1):
     # start_new_session gives precisely this invocation its own process group.
     # The caller has not reaped its leader, including when that leader exited early.
     if process_group_status(process.pid) == "exited":
@@ -1214,7 +1248,7 @@ def stop_own_group(process):
         if process_group_status(process.pid) != "exited":
             raise ExecutionUnknown("Cannot signal the managed process group") from exc
     try:
-        wait_for_process_group(process, time.monotonic() + 1)
+        wait_for_process_group(process, time.monotonic() + grace)
         return
     except (subprocess.TimeoutExpired, ExecutionUnknown):
         pass
@@ -1253,6 +1287,12 @@ def run_job(project, args):
             timeout = args.timeout if args.timeout is not None else config["limits"]["timeout_seconds"]
             require(0 < timeout <= config["limits"]["timeout_seconds"], "--timeout must be positive and no greater than limits.timeout_seconds")
             worker = select_worker(config, args)
+            hermes = bool(worker and worker["client"] == "hermes")
+            if hermes:
+                require("hermes" in worker, "Configure worker.hermes.approval explicitly before managed Hermes dispatch")
+                bridge = str(Path(__file__).resolve().with_name("hermes-worker.py"))
+                require(len(args.argv) >= 3 and args.argv[:3] == [sys.executable, "-I", bridge],
+                        "Managed Hermes requires its matched gateway bridge; use policy-dispatch.py")
             task = state["tasks"].get(args.task)
             if task:
                 require(task["state"] not in ("running", "unknown", "integrated") and not task.get("needs_reconciliation"), "Task has running/unknown/integrated work; explicitly reconcile it before another attempt")
@@ -1276,6 +1316,14 @@ def run_job(project, args):
                        "epoch": args.epoch, "revision": state["revision"], "state": "reserved", "command": args.argv, "cwd": str(cwd),
                        "log": str(log_path), "timeout_seconds": timeout, "supervisor": process_identity(os.getpid()), "created_at": timestamp(),
                        "reviewer": reviewer, "role": args.role, **protocol}
+            child_env = dict(os.environ, PLAYBOOK_PROJECT=state["root"])
+            if hermes:
+                receipt_path = log_dir / (attempt_id + ".hermes.json")
+                attempt["external_receipt"] = str(receipt_path)
+                write_json(receipt_path, {"protocol": "hermes-gateway-v1", "attempt_id": attempt_id,
+                           "state": "not_submitted", "worker": worker, "cwd": str(cwd),
+                           "timeout_seconds": timeout})
+                child_env.update(PLAYBOOK_HERMES_RECEIPT=str(receipt_path), PLAYBOOK_ATTEMPT=attempt_id)
             state["attempts"].append(attempt)
             state["tasks"][args.task] = {**(task or {}), "state": "reserved", "worktree": str(cwd), "attempt": attempt_id, "epoch": args.epoch}
             project.save(state)  # Must be durable before Popen can execute any child code.
@@ -1283,7 +1331,7 @@ def run_job(project, args):
                 with log_path.open("xb") as log:
                     deadline = time.monotonic() + timeout
                     process = subprocess.Popen(args.argv, cwd=cwd, stdout=log, stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL,
-                                               env=dict(os.environ, PLAYBOOK_PROJECT=state["root"]), start_new_session=True)
+                                               env=child_env, start_new_session=True)
                 attempt.update(state="running", process=process_identity(process.pid), pid=process.pid, pgid=process.pid, started_at=timestamp())
                 state["tasks"][args.task]["state"] = "running"
                 project.save(state)
@@ -1300,16 +1348,19 @@ def run_job(project, args):
             returncode = wait_for_process_group(process, deadline, lambda: cancellation_requested(project, attempt_id))
         except CancellationRequested:
             cancelled = True
-            stop_own_group(process)
+            stop_own_group(process, grace=30 if hermes else 1)
             returncode = 125
         except subprocess.TimeoutExpired:
             timed_out = True
-            stop_own_group(process)
+            stop_own_group(process, grace=30 if hermes else 1)
             returncode = 124
+        external = confirm_external(attempt, returncode) if hermes else None
         with project.lock():
             state = project.load()
             attempt = next(item for item in state["attempts"] if item["id"] == attempt_id)
             late = state["epoch"] != args.epoch or state["owner"]["session"] != args.session
+            if external is not None:
+                attempt["external_execution"] = external
             attempt.update(state="reported" if returncode == 0 else "blocked", returncode=returncode, timed_out=timed_out, late_result=late, finished_at=timestamp(), cancelled=cancelled)
             if attempt.get("cancel_request"):
                 attempt["cancel_acknowledgement"] = {"at": timestamp(), "outcome": "cancelled" if cancelled else "completed-before-cancel" if not timed_out else "timed-out"}
@@ -1342,7 +1393,7 @@ def runtime_version():
             continue
         files[name] = snapshot.file(directory, name)["sha256"]
     return {"package_version": PACKAGE_VERSION, "runtime_api": RUNTIME_API, "schema_version": SCHEMA,
-            "config_schema_version": SCHEMA, "state_schema_version": SCHEMA, "release_status": "released",
+            "config_schema_version": SCHEMA, "state_schema_version": SCHEMA, "release_status": "development-unreleased",
             "capabilities": CAPABILITIES, "runtime_path": str(Path(__file__).resolve()), "files": files, "missing_files": missing}
 
 

@@ -3,7 +3,7 @@
   "owner": { "name": "Sakyaroy" },
   "metadata": {
     "description": "Five explicit project lifecycle skills for cooperating coding sessions",
-    "version": "3.0.0"
+    "version": "3.1.0-dev.1"
   },
   "plugins": [
     {

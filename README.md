@@ -74,6 +74,10 @@ done
 
 If a skills installer offers several discovered entries, select these five. Root `SKILL.md` is the retained `orchestrator-playbook` compatibility entry; installing the entire repository as one old-style skill does not install the five new entries. Upgrades are deliberate: review the new version and local changes, then replace your chosen installation. There is no automatic updater.
 
+### Hermes native commands
+
+Hermes employees do not need these orchestrator skills installed. For an orchestrator inside Hermes, build the separate native plugin with `python3 -I scripts/build-hermes-plugin.py --output /physical/staging/orchestrator-playbook`. It reuses the five canonical entries without exposing ordinary `SKILL.md` files to model discovery. Each command requires a session-bound **Load** choice; gateway/TUI instruction injection also needs an operator-reviewed host permission. See [the adapter guide](adapters/hermes/README.md) and [worker configuration](references/hermes.md). Building does not install, enable or grant permissions. This development version has offline contract tests; live plugin/frontend and paid-model execution remain unverified.
+
 ## Continuing and handing off
 
 - **Resume:** select `playbook-resume` in the owner session. It reads recorded tasks and current differences. It does not repeat dispatches or tests just because a conversation resumed.
@@ -93,7 +97,7 @@ Configuration covers workers, inherited/fixed/recommended model and effort choic
 
 Permissions are `allow`, `ask` or `deny`; missing permission is not allowance. Explicit answers can authorize routine local work once, without asking again for every task card. `ask` and `deny` do not execute the guarded action. Push permission does not authorize deployment or publication. Cleanup permission still requires checks for dirty work, unmerged changes, active workers and retained evidence.
 
-`inherit` uses each worker's own defaults. `fixed` must map to a verified client capability. `recommend` is a proposal until resolved. The adapter supports explicit model selection and checks CLI help before passing Claude effort, Codex reasoning effort or DSH reasoning-effort overlays. Profile overrides are supported for Codex and DSH; DSH requires an explicitly selected noninteractive profile, whose model/effort settings can still be inherited. Hermes effort/profile overrides and Claude profile overrides are unsupported and block launch. These mappings and argument tests do not prove login, model availability or actual reasoning behavior. No credentials belong in project configuration.
+`inherit` uses each worker's own defaults. `fixed` must map to a verified client capability. `recommend` is a proposal until resolved. The adapter supports explicit model selection and checks CLI help before passing Claude effort, Codex reasoning effort or DSH reasoning-effort overlays. Profile overrides are supported for Codex and DSH; DSH requires an explicitly selected noninteractive profile, whose model/effort settings can still be inherited. Hermes uses its public gateway protocol for model/reasoning/profile selection, with an explicit approval-response policy and durable admission tracking; [its reference](references/hermes.md) explains the completion and cancellation limits. Claude profile overrides remain unsupported. These mappings and argument tests do not prove login, model availability or actual reasoning behavior. No credentials belong in project configuration.
 
 Partial changes use `configure --patch FILE`, for example `{"limits":{"agents":3}}`, preserving omitted settings. `--config FILE` remains deliberate full replacement. Existing schema-1 projects stay readable; explicit `runtime_api:2` activation enables the extended protocol without silently changing old policy hashes. Older runtimes reject that marker instead of ignoring its constraints.
 
@@ -107,7 +111,7 @@ Integration records bind verified participants to an actual target and associate
 
 ## Runtime diagnosis
 
-Run `python3 -I "$PLAYBOOK_SKILL_DIR/scripts/playbook.py" version` without initializing a project. It identifies the executing path, package/runtime API/schema versions, capabilities and required file hashes. For an initialized project, `doctor --project "$PLAYBOOK_PROJECT"` compares the running bundle, local runtime copies and `.orchestrator/runtime-manifest.json`. Missing, different and unknown copies remain visible; diagnosis does not overwrite or upgrade them. Version 3.0.0 reports `release_status:released`; compare hashes as well as the version string to identify older development copies or local modifications.
+Run `python3 -I "$PLAYBOOK_SKILL_DIR/scripts/playbook.py" version` without initializing a project. It identifies the executing path, package/runtime API/schema versions, capabilities and required file hashes. For an initialized project, `doctor --project "$PLAYBOOK_PROJECT"` compares the running bundle, local runtime copies and `.orchestrator/runtime-manifest.json`. Missing, different and unknown copies remain visible; diagnosis does not overwrite or upgrade them. This checkout reports `3.1.0-dev.1` and `release_status:development-unreleased`; the published 3.0.0 release remains separate. Compare hashes as well as version strings to identify local modifications.
 
 ## Cooperation boundary
 

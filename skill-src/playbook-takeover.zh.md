@@ -4,7 +4,7 @@ description: 显式以新会话认领已准备的交接，或核查用户指示�
 license: MIT
 compatibility: POSIX 上的 Python 3.9+；Git 可选。
 metadata:
-  version: "3.0.0"
+  version: "3.1.0-dev.1"
 disable-model-invocation: true
 ---
 

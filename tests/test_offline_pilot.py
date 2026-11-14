@@ -23,7 +23,7 @@ REPO = Path(__file__).resolve().parents[1]
 PYTHON = [sys.executable, "-I", "-B"]
 REQUIRED_SCRIPTS = {
     "playbook.py", "playbook_work.py", "playbook-foundation.py",
-    "policy-dispatch.py", "wt.sh", "dispatch.sh", "init-plan.sh",
+    "policy-dispatch.py", "hermes-worker.py", "hermes_gateway.py", "wt.sh", "dispatch.sh", "init-plan.sh",
 }
 PARSER_SOURCE = '''import csv
 import io

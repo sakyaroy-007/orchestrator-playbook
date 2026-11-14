@@ -325,12 +325,12 @@ raise SystemExit(74)
             if arg == "--patch":
                 self.assertFalse(Path(observed["args"][index + 1]).exists())
 
-    def test_unsupported_effort_fails_before_worker_execution(self):
+    def test_legacy_hermes_policy_requires_explicit_approval_selection(self):
         self.config["workers"][0].update(client="hermes", effort={"mode": "fixed", "value": "high"})
         self.initialize()
         result = self.dispatch("hermes", success=False)
         self.assertNotEqual(result.returncode, 0)
-        self.assertIn("not verified", result.stderr)
+        self.assertIn("worker.hermes.approval", result.stderr)
         self.assertFalse(self.stub_record.exists())
 
     def test_unapproved_cli_override_is_not_applied(self):

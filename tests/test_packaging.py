@@ -21,11 +21,11 @@ BUILDER = REPO / "scripts/build-skills.py"
 NAMES = ("playbook", "playbook-start", "playbook-resume", "playbook-handoff", "playbook-takeover")
 SCRIPTS = (
     "playbook.py", "playbook_work.py", "playbook-foundation.py", "policy-dispatch.py",
-    "init-plan.sh", "wt.sh", "dispatch.sh",
+    "hermes-worker.py", "hermes_gateway.py", "init-plan.sh", "wt.sh", "dispatch.sh",
 )
 SHELL_SCRIPTS = ("init-plan.sh", "wt.sh", "dispatch.sh")
 REFERENCES = (
-    "bootstrap", "cards", "configuration", "dispatch", "handoff-files", "lessons",
+    "bootstrap", "cards", "configuration", "dispatch", "handoff-files", "hermes", "lessons",
     "lifecycle", "review", "stakeholder", "work-protocol",
 )
 TEMPLATES = (
@@ -90,7 +90,7 @@ class PackagingFixtureTests(unittest.TestCase):
             'assert (root / "templates/PROJECT-README.md").is_file()\n'
             'print(json.dumps({"fixture": module.VALUE}))\n', encoding="utf-8",
         )
-        for name in ("policy-dispatch.py", "playbook-foundation.py"):
+        for name in ("policy-dispatch.py", "playbook-foundation.py", "hermes-worker.py", "hermes_gateway.py"):
             (self.source / "scripts" / name).write_text(
                 'from pathlib import Path\nimport subprocess, sys\n'
                 'raise SystemExit(subprocess.call([sys.executable, "-I", str(Path(__file__).with_name("playbook.py"))]))\n',
@@ -327,7 +327,7 @@ class PackagingFixtureTests(unittest.TestCase):
         result = run(sys.executable, "-I", str(isolated / "scripts/playbook.py"), cwd=self.root)
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(json.loads(result.stdout), {"fixture": "standalone"})
-        for name in ("policy-dispatch.py", "playbook-foundation.py"):
+        for name in ("policy-dispatch.py", "playbook-foundation.py", "hermes-worker.py", "hermes_gateway.py"):
             result = run(sys.executable, "-I", str(isolated / "scripts" / name), cwd=self.root)
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertEqual(json.loads(result.stdout), {"fixture": "standalone"})
@@ -488,10 +488,10 @@ class RepositoryPackagingTests(unittest.TestCase):
     def test_public_manifests_and_compatibility_root(self):
         for rel in (".claude-plugin/plugin.json", ".codex-plugin/plugin.json"):
             manifest = json.loads((REPO / rel).read_text())
-            self.assertEqual(manifest["version"], "3.0.0")
+            self.assertEqual(manifest["version"], "3.1.0-dev.1")
             self.assertIn(manifest["skills"], ("./skills/", "./skills", ["./skills/" + name for name in NAMES]))
         marketplace = json.loads((REPO / ".claude-plugin/marketplace.json").read_text())
-        self.assertEqual(marketplace["metadata"]["version"], "3.0.0")
+        self.assertEqual(marketplace["metadata"]["version"], "3.1.0-dev.1")
         self.assertEqual(marketplace["plugins"][0]["skills"], ["./skills/" + name for name in NAMES])
         for filename in ("SKILL.md", "SKILL.zh.md"):
             content = (REPO / filename).read_text(encoding="utf-8")

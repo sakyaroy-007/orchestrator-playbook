@@ -1,0 +1,13 @@
+{
+  "manifest_version": 2,
+  "name": "orchestrator-playbook",
+  "version": "3.1.0-dev.1",
+  "kind": "standalone",
+  "description": "Five Playbook lifecycle commands backed by bundled canonical resources.",
+  "license": "MIT",
+  "requires_hermes": ">=0.23.1,<0.24.0",
+  "provides_tools": [],
+  "provides_hooks": [],
+  "capabilities": [],
+  "python_dependencies": []
+}

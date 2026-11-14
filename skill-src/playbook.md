@@ -4,7 +4,7 @@ description: Explicit project workspace and lifecycle entry. Show the current st
 license: MIT
 compatibility: Python 3.9+ on POSIX; Git is optional. Legacy shell adapters additionally require bash and their documented dependencies.
 metadata:
-  version: "3.0.0"
+  version: "3.1.0-dev.1"
 disable-model-invocation: true
 ---
 

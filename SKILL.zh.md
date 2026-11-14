@@ -4,7 +4,7 @@ description: Playbook 项目生命周期的显式兼容入口。仅按用户要�
 license: MIT
 compatibility: POSIX 上的 Python 3.9+；Git 可选。旧 shell 适配器另需 bash 及其文档列出的依赖。
 metadata:
-  version: "3.0.0"
+  version: "3.1.0-dev.1"
   repository: "https://github.com/sakyaroy-007/orchestrator-playbook"
 disable-model-invocation: true
 ---

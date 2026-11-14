@@ -12,7 +12,7 @@ import sys
 
 
 PACKAGE = "orchestrator-playbook"
-VERSION = "3.0.0"
+VERSION = "3.1.0-dev.1"
 SKILLS = ("playbook", "playbook-start", "playbook-resume", "playbook-handoff", "playbook-takeover")
 MANIFESTS = (".claude-plugin/plugin.json", ".claude-plugin/marketplace.json",
              ".codex-plugin/plugin.json", ".agents/plugins/marketplace.json")

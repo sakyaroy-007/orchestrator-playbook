@@ -28,10 +28,10 @@ SKILLS = {
 }
 RUNTIME_SCRIPTS = (
     "playbook.py", "playbook_work.py", "playbook-foundation.py", "policy-dispatch.py",
-    "init-plan.sh", "wt.sh", "dispatch.sh",
+    "hermes-worker.py", "hermes_gateway.py", "init-plan.sh", "wt.sh", "dispatch.sh",
 )
 REFERENCE_NAMES = (
-    "bootstrap", "cards", "configuration", "dispatch", "handoff-files",
+    "bootstrap", "cards", "configuration", "dispatch", "handoff-files", "hermes",
     "lessons", "lifecycle", "review", "stakeholder", "work-protocol",
 )
 TEMPLATE_NAMES = (

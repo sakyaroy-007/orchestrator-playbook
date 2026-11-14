@@ -16,6 +16,8 @@ This repository **is a skill package**, not a project using that package.
 | `scripts/playbook.py`, `scripts/playbook_work.py` | Python 3.9+ standard-library runtime and required sibling task/evidence module; invoke the CLI with `python3 -I` |
 | `scripts/playbook-foundation.py` | Runtime helper for read-only foundation checks and owner-guarded create-only repairs |
 | `scripts/policy-dispatch.py` | Approved worker configuration adapter for managed dispatch |
+| `scripts/hermes-worker.py`, `scripts/hermes_gateway.py` | Public local gateway admission bridge and bounded standard-library WebSocket transport |
+| `adapters/hermes/`, `scripts/build-hermes-plugin.py` | Explicit native Hermes commands and standalone plugin builder; no installation or permission side effects |
 | `scripts/check-manifests.py` | Repository/CI manifest checker; not a bundled runtime dependency |
 | `scripts/init-plan.sh`, `wt.sh`, `dispatch.sh` | Retained shell entry paths, with a documented legacy boundary |
 | `scripts/build-skills.py` | Generator; `--check` detects drift, `--output` selects a separate skills root |
@@ -30,7 +32,7 @@ The entry names are `playbook`, `playbook-start`, `playbook-resume`, `playbook-h
 
 ## Generation and ownership of files
 
-The generator copies exactly the runtime scripts `playbook.py`, `playbook_work.py`, `playbook-foundation.py`, `policy-dispatch.py`, `init-plan.sh`, `wt.sh` and `dispatch.sh`, plus Markdown resources from `references/` and `templates/`. Required resources include both `work-protocol` language editions and `PROJECT-README.md`. Adding a runtime dependency requires updating the allowlist and packaging tests. Never copy the whole repository, `.git`, tests, the generator or CI tools such as `check-manifests.py` into a bundle. A single installed skill must work without siblings or a link back to this checkout.
+The generator copies exactly the runtime scripts `playbook.py`, `playbook_work.py`, `playbook-foundation.py`, `policy-dispatch.py`, `hermes-worker.py`, `hermes_gateway.py`, `init-plan.sh`, `wt.sh` and `dispatch.sh`, plus Markdown resources from `references/` and `templates/`. Required resources include both `work-protocol` language editions and `PROJECT-README.md`. Adding a runtime dependency requires updating the allowlist and packaging tests. Never copy the whole repository, `.git`, tests, the generator or CI tools such as `check-manifests.py` into a bundle. A single installed skill must work without siblings or a link back to this checkout.
 
 Each generated skill's `.playbook-generated.json` records managed paths, hashes and modes. Only these recorded, unmodified files can be replaced or removed on rebuild. Unknown siblings and user files are preserved; unmarked skill directories, collisions, modified generated files and symlinks fail before the batch writes. Do not delete a user's additions or reset their local edits to force a build through. The marker is provenance for a cooperating build, not a security signature.
 

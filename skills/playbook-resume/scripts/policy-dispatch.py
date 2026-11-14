@@ -106,8 +106,8 @@ def choose_worker(config, client, requested):
 
 def reject_setting_overrides(client, arguments):
     """Recognize dedicated-setting aliases, not arbitrary native CLI syntax."""
-    flags = ("--model", "-m", "--effort", "--profile", "-p")
-    attached = {"codex": ("-m", "-p"), "hermes": ("-m",)}.get(client, ())
+    flags = ("--model", "-m", "--effort", "--profile", "-p", "--reasoning")
+    attached = {"codex": ("-m", "-p"), "hermes": ("-m", "-p")}.get(client, ())
     keys = ("model", "model_reasoning_effort", "agent-default-model")
     for index, arg in enumerate(arguments):
         conflict = arg.partition("=")[0] in flags or any(arg.startswith(flag) for flag in attached)
@@ -223,6 +223,12 @@ def main(argv):
     probe = HelpProbe()
     native = list(approved_args)
     profile = worker.get("profile")
+    if client == "hermes":
+        policy = worker.get("hermes")
+        if not isinstance(policy, dict) or policy.get("approval") not in ("inherit", "approve", "deny"):
+            raise DispatchError("configure worker.hermes.approval explicitly; legacy -z approval is not inherited")
+        if native:
+            raise DispatchError("managed Hermes uses the gateway protocol; worker.args must be empty")
     if client == "dsh" and not profile:
         # The verified DSH launcher requires a profile, with no native default.
         # Choosing headless here would silently replace the worker's settings.
@@ -235,7 +241,7 @@ def main(argv):
         elif client == "codex":
             probe.require_flag(binary, client, "--profile")
             native += ["--profile", profile]
-        else:
+        elif client != "hermes":
             raise DispatchError("a profile mapping is not verified for {}; keep it unset".format(client))
     temporary_patch = None
     try:
@@ -260,8 +266,8 @@ def main(argv):
                 # DSH stops parsing launcher flags at the first application
                 # argument (for example --json). Keep overlays before those.
                 native = ["--patch", temporary_patch] + native
-            else:
-                raise DispatchError("effort mapping is not verified for {}; inherit its existing setting".format(client))
+            # Hermes sends this native value through session.create.reasoning;
+            # the bridge requires an exact snapshot echo before task submission.
         legacy = ["bash", str(directory / "dispatch.sh"), client, opts["cwd"], opts["prompt"], "-t", str(timeout)]
         if model is not None:
             legacy += ["-m", model]
@@ -271,6 +277,13 @@ def main(argv):
             legacy += ["-l", opts["log"]]
         if native:
             legacy += ["--"] + native
+        if client == "hermes":
+            legacy = [sys.executable, "-I", str(directory / "hermes-worker.py"),
+                      "--binary", binary, "--prompt=" + opts["prompt"]]
+            if opts["prompt"] == "--precheck":
+                legacy.append("--precheck")
+            if opts["log"]:
+                legacy += ["--log", opts["log"]]
         command = [sys.executable, "-I", str(runtime), "run", "--project", str(project),
                    "--session", session, "--epoch", epoch, "--action", action, "--task", task,
                    "--worker", worker["id"], "--cwd", opts["cwd"], "--config-revision", str(revision),

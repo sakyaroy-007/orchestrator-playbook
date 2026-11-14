@@ -2,11 +2,11 @@
   "files": {
     "SKILL.md": {
       "mode": 420,
-      "sha256": "947555e8b32d116dd8608156e1ca5e4a5768866289fcdac5a4ff223974991c4d"
+      "sha256": "25c3095910a21eae1c617b4c5eb1d93835fd2fbe66a373bd00f99aeb831c83c5"
     },
     "SKILL.zh.md": {
       "mode": 420,
-      "sha256": "51b477ff03bb33850a8d34a561d6b468087bcbc9ba7faeaa4fc8701c051d2ac4"
+      "sha256": "0a9e9a5b55174c1a05193967000d6199faf1a7aef3416dfbe3b2b270f58454f7"
     },
     "agents/openai.yaml": {
       "mode": 420,
@@ -30,19 +30,19 @@
     },
     "references/configuration.md": {
       "mode": 420,
-      "sha256": "7f57094488e63ec3d4aa80d75505d260b04bf2d15dc319663cc96bd917c81661"
+      "sha256": "1d35213cb543f54dd0920a5534e66a2b2b27dd659cc3488a38096286ed60d7b1"
     },
     "references/configuration.zh.md": {
       "mode": 420,
-      "sha256": "c9ab0cda4b6474070e71113696248898a6edeff0827b254da3996de09b3770b7"
+      "sha256": "9a8df3d579ac6f459a51f36e90b154952ac07bea0734d371e9fc29e7a5ca05b8"
     },
     "references/dispatch.md": {
       "mode": 420,
-      "sha256": "97c7fc6dd1e817d8a04aba3d8b87f5bd46e0e61cd5a8148da119cd6d8467914a"
+      "sha256": "8d93672978353d106ec6e72a7b9dcb44869ddf483a1b6a13b22c1c1d09a0e431"
     },
     "references/dispatch.zh.md": {
       "mode": 420,
-      "sha256": "96af8d1ec0aeb4f088b5f9bf77702c46a787625ce2abd3dd96b3aaacac50faa5"
+      "sha256": "11b2de0441578cbedaa8cb1ec169133e6e6f881b6ead78c7211e271fc0d26dc0"
     },
     "references/handoff-files.md": {
       "mode": 420,
@@ -51,6 +51,14 @@
     "references/handoff-files.zh.md": {
       "mode": 420,
       "sha256": "afbc7eddc11ae8875332e7f113e8441ceaa41202207ae85b78316fdb40d66c12"
+    },
+    "references/hermes.md": {
+      "mode": 420,
+      "sha256": "390fe27f50655263a013b30713587ade23b72ff1da6d388eca7053beb01f3a4a"
+    },
+    "references/hermes.zh.md": {
+      "mode": 420,
+      "sha256": "8ba144576ee879838318404e7fd637ae9f96db95896096dc332b937ea8d48325"
     },
     "references/lessons.md": {
       "mode": 420,
@@ -94,7 +102,15 @@
     },
     "scripts/dispatch.sh": {
       "mode": 493,
-      "sha256": "3f7462ac41d67b6c06fd2848176b21b5d1cf210d451ff0485402239b009c704d"
+      "sha256": "94644b694cd660e1e698d4995f2e835d8561858bf72ac1391703c0d92c7e274d"
+    },
+    "scripts/hermes-worker.py": {
+      "mode": 493,
+      "sha256": "4af833a57b9be5837952b6dccfbd4349a5ae0ccda621f05d5344f13c7629c840"
+    },
+    "scripts/hermes_gateway.py": {
+      "mode": 493,
+      "sha256": "8e279e6d23f807e0e6865206d2d4aea42a40ba5f28225c36d07c32520736dce7"
     },
     "scripts/init-plan.sh": {
       "mode": 493,
@@ -106,15 +122,15 @@
     },
     "scripts/playbook.py": {
       "mode": 493,
-      "sha256": "fe88556295e27012906e4132651677af72bc0f763b37f6cf594cfba9374bafbb"
+      "sha256": "3278bb04c2986971f58d405653b3124742fe5e0fcb5b664e96fd40d22bc5b15e"
     },
     "scripts/playbook_work.py": {
       "mode": 493,
-      "sha256": "e25d2e28a3e7efdee0654b6d1ab3b2daa86ff1d7639d64c12fffc854c9babc36"
+      "sha256": "e9a1c1c77f41df85137720ba9714429a72274ef1e47d6760acbafb2de05bc43e"
     },
     "scripts/policy-dispatch.py": {
       "mode": 493,
-      "sha256": "e63b79ee2938be67d70c37bf4accc936836bda1bed72871f6c896cac7fd5f40d"
+      "sha256": "08d7b2062d9f9048c8ee5127867d80e6ab6d27fe278a8baf6ad309a1af5596b9"
     },
     "scripts/wt.sh": {
       "mode": 493,

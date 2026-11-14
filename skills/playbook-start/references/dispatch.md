@@ -51,6 +51,8 @@ PLAYBOOK_PROJECT="$PLAYBOOK_PROJECT" PLAYBOOK_SESSION="$PLAYBOOK_SESSION" PLAYBO
 
 The adapter records a separate `<task>-precheck` task. Check its result and the expected cwd/branch before sending implementation. A precheck failure stops the launch. For non-Git/manual work, check the configured directory and scope without assuming a branch. Executable discovery alone does not perform this precheck or establish authentication.
 
+Hermes uses the [dedicated gateway bridge](hermes.md), with an explicit approval-response policy and a durable session/admission receipt. A CLI exit alone cannot release its reservation. Timeout/cancellation allows bounded cleanup and requires a terminal admission plus available idle resource projections; uncertain or interrupted delegation cleanup stays unknown. Raw `run` with an arbitrary Hermes CLI is rejected; use the validating dispatcher.
+
 ## Other commands and verification
 
 A supported external worker command with inherited settings can use `run` directly. Set `PLAYBOOK_COMMAND` to the approved executable and pass arguments as separate arguments after `--`, not as a shell command string:
@@ -59,7 +61,7 @@ A supported external worker command with inherited settings can use `run` direct
 python3 -I "$PLAYBOOK_SKILL_DIR/scripts/playbook.py" run --project "$PLAYBOOK_PROJECT" --session "$PLAYBOOK_SESSION" --epoch "$PLAYBOOK_EPOCH" --action dispatch --task "$PLAYBOOK_TASK" --worker "$PLAYBOOK_WORKER" --cwd "$PLAYBOOK_WORKTREE" -- "$PLAYBOOK_COMMAND"
 ```
 
-`run` also accepts `--timeout SECONDS`: a positive integer no larger than `limits.timeout_seconds`. For CLI dispatch, `-t` may shorten that limit and the adapter passes it to runtime `--timeout`; the runtime owns the managed process-group deadline, while the managed child skips the legacy alarm. Unconfigured v2 timeout behavior remains unchanged.
+`run` also accepts `--timeout SECONDS`: a positive integer no larger than `limits.timeout_seconds`. For CLI dispatch, `-t` may shorten that limit and the adapter passes it to runtime `--timeout`; the runtime owns the managed process-group deadline, while the managed child skips the legacy alarm. Unconfigured v2 keeps its local alarm; legacy Hermes now reports that gateway execution is unknown instead of claiming it stopped.
 
 This does not translate customized client settings: use the validating dispatcher when model/effort/profile/args are explicit. Manual/client-hosted sessions that cannot enter this managed subprocess path must be recorded/reconciled with `task`; report that they are outside automatic launch, timeout and slot accounting. Do not claim v3 enforcement for an unrelated scheduler.
 

@@ -51,6 +51,8 @@ PLAYBOOK_PROJECT="$PLAYBOOK_PROJECT" PLAYBOOK_SESSION="$PLAYBOOK_SESSION" PLAYBO
 
 适配器另记 `<task>-precheck` 任务。确认结果与期望 cwd/分支后才发实现，预检失败就停止。非 Git/人工工作检查配置目录和范围，不假定有分支。仅发现 CLI 不会执行预检，也不验证登录。
 
+Hermes 使用[专用 gateway 桥接器](hermes.zh.md)，明确配置审批响应策略，持久保存 session／admission 回执。仅 CLI 退出不能释放占用。超时／取消后允许有界清理，须有 admission 终态和可用且空闲的资源投影；不确定的执行或委派中断清理仍保留 unknown。直接 `run` 任意 Hermes CLI 会被拒绝，应使用校验派发器。
+
 ## 其他命令与验证
 
 支持的外部员工命令、继承设置时可直接用 `run`。`PLAYBOOK_COMMAND` 是获准可执行文件，参数在 `--` 后逐个传，不能拼成 shell 命令串：
@@ -59,7 +61,7 @@ PLAYBOOK_PROJECT="$PLAYBOOK_PROJECT" PLAYBOOK_SESSION="$PLAYBOOK_SESSION" PLAYBO
 python3 -I "$PLAYBOOK_SKILL_DIR/scripts/playbook.py" run --project "$PLAYBOOK_PROJECT" --session "$PLAYBOOK_SESSION" --epoch "$PLAYBOOK_EPOCH" --action dispatch --task "$PLAYBOOK_TASK" --worker "$PLAYBOOK_WORKER" --cwd "$PLAYBOOK_WORKTREE" -- "$PLAYBOOK_COMMAND"
 ```
 
-`run` 另支持 `--timeout SECONDS`，必须是正整数且不超过 `limits.timeout_seconds`。CLI 派发的 `-t` 可以缩短上限，适配器把它传给运行时 `--timeout`；受管进程组的超时统一由运行时负责，受管子进程跳过旧 alarm。未配置 v2 的超时行为不变。
+`run` 另支持 `--timeout SECONDS`，必须是正整数且不超过 `limits.timeout_seconds`。CLI 派发的 `-t` 可以缩短上限，适配器把它传给运行时 `--timeout`；受管进程组的超时统一由运行时负责，受管子进程跳过旧 alarm。未配置 v2 保留本地 alarm；旧 Hermes 超时改为报告 gateway 执行未知，不再声称任务已停止。
 
 它不翻译自定义客户端设置；model/effort/profile/args 明确指定时走校验派发器。无法进入该受管子进程路径的人工/宿主会话通过 `task` 记录核对，说明不在自动启动、超时与槽位计数内。不能给无关调度器宣称 v3 保证。
 

@@ -1,6 +1,6 @@
 {
   "name": "orchestrator-playbook",
-  "version": "3.0.0",
+  "version": "3.1.0-dev.1",
   "description": "Five explicit project lifecycle skills: choose an action, start, resume, hand off and take over cooperating sessions on one machine.",
   "author": { "name": "Sakyaroy", "url": "https://github.com/sakyaroy-007" },
   "homepage": "https://github.com/sakyaroy-007/orchestrator-playbook",

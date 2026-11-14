@@ -63,7 +63,7 @@
 
 模型和思考模式彼此独立。`profile` 为字符串：有自身默认值的客户端可以不填，但受管 DSH 必须填写，因为其启动器没有默认 profile。DSH 缺 profile 会在任何模型调用前阻塞启动。模型/思考/profile 使用专用字段，不用冲突的 `args` 覆盖。示例员工记录不代表获准启动。不能凭空认定各供应商思考档位等价，不能把建议自动翻译成参数，也不能改全局文件凑出可启动状态。
 
-当前校验派发器把固定模型交给现有 `-m` 适配。在检查已安装客户端 help 后，支持 Claude `--effort`、Codex `--config model_reasoning_effort=...`、DSH 单次 `agent-default-model.reasoningEffort` patch。Hermes 固定思考不支持。显式 profile 支持 Codex 和 DSH，拒绝 Claude/Hermes profile 覆盖。这些只是参数映射，不证明已登录、模型可用或实际推理行为。不支持的选项和未解决的 `recommend` 阻塞启动。DSH profile 必须明确选择，继承只保留选定 profile 的模型/思考，不自动选择旧版 `headless`。
+当前校验派发器把固定模型交给现有 `-m` 适配。在检查已安装客户端 help 后，支持 Claude `--effort`、Codex `--config model_reasoning_effort=...`、DSH 单次 `agent-default-model.reasoningEffort` patch。Hermes 使用专用 gateway 桥接器：固定模型／思考映射到 session 的 model／reasoning，可选 profile 选择 attach 目标，提交前核对会话设置。其员工记录必须明确提供 `hermes.approval` 策略，`args` 为空，审批和取消边界见 [Hermes](hermes.zh.md)。显式 profile 支持 Codex、DSH 和 Hermes，拒绝 Claude profile 覆盖。这些只是参数映射，不证明已登录、模型可用或实际推理行为。不支持的选项和未解决的 `recommend` 阻塞启动。DSH profile 必须明确选择，继承只保留选定 profile 的模型/思考，不自动选择旧版 `headless`。
 
 Git 支持的值：合并方式 `merge|squash|rebase|ff-only`，节奏 `manual|after-merge|stage|never`，清理 `retain|after-merge|manual`。当前受管 push 路径拒绝 `manual` 和 `never`；推送前通过 configure 设置获准的 `stage` 或 `after-merge` 节奏。即使 cleanup 为 allow，`retain` 仍阻止清理。
 

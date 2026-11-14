@@ -1,7 +1,7 @@
 {
   "name": "orchestrator-playbook",
   "description": "Five explicit project lifecycle skills: choose an action, start or adopt a project, resume, prepare a handoff, and take over with same-machine session ownership checks.",
-  "version": "3.0.0",
+  "version": "3.1.0-dev.1",
   "author": { "name": "Sakyaroy" },
   "homepage": "https://github.com/sakyaroy-007/orchestrator-playbook",
   "repository": "https://github.com/sakyaroy-007/orchestrator-playbook",
